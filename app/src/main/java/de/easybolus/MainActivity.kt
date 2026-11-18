@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.easybolus.domain.CsvExporter
 import de.easybolus.ui.MainViewModel
 import de.easybolus.ui.bolus.BolusAndEntrySheet
+import de.easybolus.ui.bolus.BolusReminderData
+import de.easybolus.ui.bolus.BolusReminderDialog
 import de.easybolus.ui.diary.DiaryScreen
 import de.easybolus.ui.home.HomeScreen
 import de.easybolus.ui.settings.SettingsScreen
@@ -57,6 +59,7 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
 
     var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
     var showBolusSheet by remember { mutableStateOf(false) }
+    var bolusReminder by remember { mutableStateOf<BolusReminderData?>(null) }
 
     EasyBolusTheme(themeMode = settings.themeMode) {
         if (currentScreen == AppScreen.SETTINGS) {
@@ -109,19 +112,38 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
             }
         }
 
-    if (showBolusSheet) {
-        BolusAndEntrySheet(
-            currentBgMgDl = homeState.latestGlucose?.mgDl,
-            currentIob = homeState.currentIob,
-            settings = settings,
-            onDismiss = { showBolusSheet = false },
-            onSaveBolusAndCarbs = { bolus, carbs, note, bg, timestampMillis ->
-                viewModel.saveBolusAndCarbs(bolus, carbs, note, bg, timestampMillis)
-            },
-            onAddQuickEntry = { type, bolus, carbs, basal, note, timestampMillis ->
-                viewModel.addQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
-            }
-        )
-    }
+        if (showBolusSheet) {
+            BolusAndEntrySheet(
+                currentBgMgDl = homeState.latestGlucose?.mgDl,
+                currentIob = homeState.currentIob,
+                settings = settings,
+                onDismiss = { showBolusSheet = false },
+                onSaveBolusAndCarbs = { bolus, carbs, note, bg, timestampMillis ->
+                    viewModel.saveBolusAndCarbs(bolus, carbs, note, bg, timestampMillis)
+                    if (bolus > 0.0) {
+                        bolusReminder = BolusReminderData(
+                            bolusUnits = bolus,
+                            carbsGrams = carbs?.takeIf { it > 0.0 }
+                        )
+                    }
+                },
+                onAddQuickEntry = { type, bolus, carbs, basal, note, timestampMillis ->
+                    viewModel.addQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
+                    if (bolus != null && bolus > 0.0) {
+                        bolusReminder = BolusReminderData(
+                            bolusUnits = bolus,
+                            carbsGrams = carbs?.takeIf { it > 0.0 }
+                        )
+                    }
+                }
+            )
+        }
+
+        bolusReminder?.let { reminder ->
+            BolusReminderDialog(
+                reminder = reminder,
+                onDismiss = { bolusReminder = null }
+            )
+        }
     }
 }
