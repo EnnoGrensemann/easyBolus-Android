@@ -123,4 +123,5 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
             }
         )
     }
+    }
 }
