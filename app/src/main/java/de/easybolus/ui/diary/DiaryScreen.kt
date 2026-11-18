@@ -32,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -58,10 +59,8 @@ import de.easybolus.ui.theme.BasalMarkerPurple
 import de.easybolus.ui.theme.BolusMarkerBlue
 import de.easybolus.ui.theme.CarbsMarkerOrange
 import de.easybolus.ui.theme.HeaderGradientTop
+import de.easybolus.ui.theme.HeaderGradientTopDark
 import de.easybolus.ui.theme.NoteMarkerSlate
-import de.easybolus.ui.theme.SurfaceLight
-import de.easybolus.ui.theme.TextPrimary
-import de.easybolus.ui.theme.TextSecondary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,10 +75,11 @@ fun DiaryScreen(
     modifier: Modifier = Modifier
 ) {
     var editingEntry by remember { mutableStateOf<DiaryEntryEntity?>(null) }
+    val isDark = MaterialTheme.colorScheme.background.red < 0.2f
 
     Scaffold(
         modifier = modifier,
-        containerColor = SurfaceLight,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -99,7 +99,7 @@ fun DiaryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = HeaderGradientTop
+                    containerColor = if (isDark) HeaderGradientTopDark else HeaderGradientTop
                 )
             )
         }
@@ -114,7 +114,7 @@ fun DiaryScreen(
             ) {
                 Text(
                     text = "Noch keine Tagebucheinträge vorhanden.\nTippe auf der Startseite auf +, um einen Bolus oder Mahlzeiten zu erfassen.",
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp
                 )
             }
@@ -223,7 +223,7 @@ private fun TimelineEntryRow(
                 modifier = Modifier
                     .width(2.dp)
                     .weight(1f)
-                    .background(if (isLast) Color.Transparent else Color(0xFFCBD5E1))
+                    .background(if (isLast) Color.Transparent else MaterialTheme.colorScheme.outlineVariant)
             )
         }
 
@@ -231,7 +231,7 @@ private fun TimelineEntryRow(
 
         // Rechte Inhaltskarte (mySugr-like)
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(14.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             modifier = Modifier
@@ -247,18 +247,18 @@ private fun TimelineEntryRow(
                 ) {
                     Text(
                         text = timeFormat.format(Date(entry.timestampMillis)),
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                     if (entry.bgAtTimeMgDl != null) {
                         Surface(
-                            color = Color(0xFFEBF5F7),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             val arrow = entry.trendAtTime?.symbol ?: ""
                             Text(
                                 text = "${entry.bgAtTimeMgDl} mg/dl $arrow".trim(),
-                                color = HeaderGradientTop,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -271,7 +271,7 @@ private fun TimelineEntryRow(
 
                 Text(
                     text = primaryText,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -280,7 +280,7 @@ private fun TimelineEntryRow(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = entry.note,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }

@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,17 +43,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.easybolus.data.settings.ThemeMode
 import de.easybolus.data.settings.UserSettings
 import de.easybolus.ui.theme.FabTeal
 import de.easybolus.ui.theme.HeaderGradientTop
-import de.easybolus.ui.theme.SurfaceLight
-import de.easybolus.ui.theme.TextSecondary
+import de.easybolus.ui.theme.HeaderGradientTopDark
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: UserSettings,
+    hasJugglucoData: Boolean = false,
     onBack: () -> Unit,
     onSaveSettings: (UserSettings) -> Unit,
     onInsertDemoData: () -> Unit,
@@ -73,9 +75,12 @@ fun SettingsScreen(
     var rangeMax by remember(settings) { mutableStateOf(settings.targetRangeMax.toString()) }
     var diaHours by remember(settings) { mutableStateOf(settings.diaHours.toString()) }
     var penStep by remember(settings) { mutableStateOf(settings.penStepSize) }
+    var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
+
+    val isDark = MaterialTheme.colorScheme.background.red < 0.2f
 
     Scaffold(
-        containerColor = SurfaceLight,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Einstellungen", color = Color.White, fontWeight = FontWeight.SemiBold) },
@@ -88,7 +93,9 @@ fun SettingsScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderGradientTop)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isDark) HeaderGradientTopDark else HeaderGradientTop
+                )
             )
         }
     ) { innerPadding ->
@@ -122,7 +129,7 @@ fun SettingsScreen(
             }
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -139,7 +146,7 @@ fun SettingsScreen(
                             Text("Stündlicher KH-Faktor", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                             Text(
                                 text = "Für jede Stunde (00–23 Uhr) einen eigenen KH-Faktor festlegen",
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp
                             )
                         }
@@ -236,6 +243,17 @@ fun SettingsScreen(
                 )
             }
 
+            Text("Erscheinungsbild", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = themeMode == mode,
+                        onClick = { themeMode = mode },
+                        label = { Text(mode.label) }
+                    )
+                }
+            }
+
             Button(
                 onClick = {
                     val baseCarbRatio = carbRatio.replace(',', '.').toDoubleOrNull() ?: settings.carbRatio
@@ -254,7 +272,8 @@ fun SettingsScreen(
                             targetRangeMin = rangeMin.toIntOrNull() ?: settings.targetRangeMin,
                             targetRangeMax = rangeMax.toIntOrNull() ?: settings.targetRangeMax,
                             diaHours = diaHours.replace(',', '.').toDoubleOrNull() ?: settings.diaHours,
-                            penStepSize = penStep
+                            penStepSize = penStep,
+                            themeMode = themeMode
                         )
                     )
                     onBack()
@@ -271,17 +290,19 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Juggluco Broadcast & Testdaten", fontWeight = FontWeight.SemiBold)
-                    Text(
-                        text = "Aktiviere in Juggluco unter Einstellungen → Send to xDrip / Glucodata den Broadcast. easyBOLUS empfängt die Werte automatisch im Hintergrund.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
+                    if (!hasJugglucoData) {
+                        Text(
+                            text = "Aktiviere in Juggluco unter Einstellungen → Send to xDrip / Glucodata den Broadcast. easyBOLUS empfängt die Werte automatisch im Hintergrund.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = onInsertDemoData, modifier = Modifier.weight(1f)) {
                             Text("Demo-Daten laden")

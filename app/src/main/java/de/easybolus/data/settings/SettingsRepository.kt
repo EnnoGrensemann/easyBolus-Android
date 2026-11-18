@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "easybolus_settings")
 
+enum class ThemeMode(val label: String) {
+    SYSTEM("System"),
+    LIGHT("Hell"),
+    DARK("Dunkel")
+}
+
 data class UserSettings(
     val carbRatio: Double = 10.0,           // g Kohlenhydrate pro 1 IE (Standard / Fallback)
     val useHourlyCarbRatio: Boolean = false,
@@ -24,7 +30,8 @@ data class UserSettings(
     val targetRangeMax: Int = 180,          // Grüner Zielbereich Max (mg/dl)
     val diaHours: Double = 4.0,             // Insulin-Wirkdauer in Stunden
     val penStepSize: Double = 0.5,          // 0.5 IE oder 1.0 IE
-    val carbAbsorptionHours: Double = 3.0   // Dauer für lineare COB-Anzeige (h)
+    val carbAbsorptionHours: Double = 3.0,  // Dauer für lineare COB-Anzeige (h)
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     fun carbRatioForHour(hour: Int): Double {
         if (!useHourlyCarbRatio || hourlyCarbRatios.size != 24) return carbRatio
@@ -45,6 +52,7 @@ class SettingsRepository(private val context: Context) {
         val DIA_HOURS = doublePreferencesKey("dia_hours")
         val PEN_STEP_SIZE = doublePreferencesKey("pen_step_size")
         val CARB_ABSORPTION_HOURS = doublePreferencesKey("carb_absorption_hours")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
@@ -54,6 +62,9 @@ class SettingsRepository(private val context: Context) {
             ?.mapNotNull { it.trim().toDoubleOrNull()?.coerceAtLeast(0.5) }
             ?.takeIf { it.size == 24 }
             ?: List(24) { baseCarbRatio }
+        val parsedThemeMode = prefs[Keys.THEME_MODE]
+            ?.let { raw -> ThemeMode.entries.firstOrNull { it.name == raw } }
+            ?: ThemeMode.SYSTEM
 
         UserSettings(
             carbRatio = baseCarbRatio,
@@ -65,7 +76,8 @@ class SettingsRepository(private val context: Context) {
             targetRangeMax = prefs[Keys.TARGET_RANGE_MAX] ?: 180,
             diaHours = prefs[Keys.DIA_HOURS] ?: 4.0,
             penStepSize = prefs[Keys.PEN_STEP_SIZE] ?: 0.5,
-            carbAbsorptionHours = prefs[Keys.CARB_ABSORPTION_HOURS] ?: 3.0
+            carbAbsorptionHours = prefs[Keys.CARB_ABSORPTION_HOURS] ?: 3.0,
+            themeMode = parsedThemeMode
         )
     }
 
@@ -85,6 +97,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.DIA_HOURS] = settings.diaHours.coerceIn(2.0, 8.0)
             prefs[Keys.PEN_STEP_SIZE] = if (settings.penStepSize >= 1.0) 1.0 else 0.5
             prefs[Keys.CARB_ABSORPTION_HOURS] = settings.carbAbsorptionHours.coerceIn(1.0, 6.0)
+            prefs[Keys.THEME_MODE] = settings.themeMode.name
         }
     }
 }

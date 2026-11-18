@@ -31,7 +31,8 @@ data class HomeUiState(
     val currentIob: Double = 0.0,
     val currentCob: Double = 0.0,
     val settings: UserSettings = UserSettings(),
-    val chartWindowHours: Int = 6
+    val chartWindowHours: Int = 6,
+    val hasJugglucoData: Boolean = false
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,7 +48,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val windowHours = 6
-    private val sinceMillis = System.currentTimeMillis() - windowHours * 3600_000L
+    private val maxHistoryHours = 24
+    private val sinceMillis = System.currentTimeMillis() - maxHistoryHours * 3600_000L
 
     val settingsFlow: StateFlow<UserSettings> = settingsRepo.settingsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
@@ -62,12 +64,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settingsRepo.settingsFlow,
         tickerFlow
     ) { latest, readings, entries, settings, now ->
-        val cutoff = now - windowHours * 3600_000L
+        val cutoff = now - maxHistoryHours * 3600_000L
         val recentReadings = readings.filter { it.timestampMillis >= cutoff }
         val recentEntries = entries.filter { it.timestampMillis >= cutoff }.sortedBy { it.timestampMillis }
         val currentIob = IobCobCalculator.calculateLinearIob(entries, now, settings.diaHours)
         val currentCob = IobCobCalculator.calculateLinearCob(entries, now, settings.carbAbsorptionHours)
         val minsAgo = latest?.let { ((now - it.timestampMillis) / 60_000L).coerceAtLeast(0L) }
+        val hasJuggluco = readings.any { it.source != "Demo" } || (latest != null && latest.source != "Demo")
 
         HomeUiState(
             latestGlucose = latest,
@@ -77,7 +80,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             currentIob = currentIob,
             currentCob = currentCob,
             settings = settings,
-            chartWindowHours = windowHours
+            chartWindowHours = windowHours,
+            hasJugglucoData = hasJuggluco
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 

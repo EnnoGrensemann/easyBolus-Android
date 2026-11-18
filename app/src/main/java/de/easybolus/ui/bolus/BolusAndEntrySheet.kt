@@ -71,7 +71,7 @@ fun BolusAndEntrySheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -172,7 +172,7 @@ private fun BolusCalculatorTab(
 
     // Berechnungskarte
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F8FA)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -190,12 +190,12 @@ private fun BolusCalculatorTab(
                     Text(
                         text = "Pen-Empfehlung",
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp
                     )
                     Text(
                         text = "Gerundet auf ${settings.penStepSize} IE",
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -203,7 +203,7 @@ private fun BolusCalculatorTab(
                     text = String.format(Locale.GERMANY, "%.1f IE", result.recommendedUnits),
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
-                    color = HeaderGradientBottom
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -255,11 +255,11 @@ private fun BreakdownRow(label: String, value: Double) {
             .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = TextSecondary, fontSize = 13.sp)
+        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
         val sign = if (value > 0) "+" else ""
         Text(
             text = String.format(Locale.GERMANY, "%s%.2f IE", sign, value),
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )
