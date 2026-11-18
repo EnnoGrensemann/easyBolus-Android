@@ -1,0 +1,250 @@
+package de.easybolus.ui
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import de.easybolus.data.local.DiaryEntryEntity
+import de.easybolus.data.local.DiaryEntryType
+import de.easybolus.data.local.EasyBolusDatabase
+import de.easybolus.data.local.GlucoseReadingEntity
+import de.easybolus.data.local.TrendArrow
+import de.easybolus.data.settings.SettingsRepository
+import de.easybolus.data.settings.UserSettings
+import de.easybolus.domain.BolusCalculationResult
+import de.easybolus.domain.BolusCalculator
+import de.easybolus.domain.IobCobCalculator
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlin.math.sin
+
+data class HomeUiState(
+    val latestGlucose: GlucoseReadingEntity? = null,
+    val minutesAgo: Long? = null,
+    val chartReadings: List<GlucoseReadingEntity> = emptyList(),
+    val chartEntries: List<DiaryEntryEntity> = emptyList(),
+    val currentIob: Double = 0.0,
+    val currentCob: Double = 0.0,
+    val settings: UserSettings = UserSettings(),
+    val chartWindowHours: Int = 6
+)
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val dao = EasyBolusDatabase.getInstance(application).dao()
+    private val settingsRepo = SettingsRepository(application)
+
+    private val tickerFlow = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(30_000L)
+        }
+    }
+
+    private val windowHours = 6
+    private val sinceMillis = System.currentTimeMillis() - windowHours * 3600_000L
+
+    val settingsFlow: StateFlow<UserSettings> = settingsRepo.settingsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
+
+    val allDiaryEntries: StateFlow<List<DiaryEntryEntity>> = dao.observeAllDiaryEntries()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val homeUiState: StateFlow<HomeUiState> = combine(
+        dao.observeLatestGlucose(),
+        dao.observeGlucoseSince(sinceMillis),
+        dao.observeAllDiaryEntries(),
+        settingsRepo.settingsFlow,
+        tickerFlow
+    ) { latest, readings, entries, settings, now ->
+        val cutoff = now - windowHours * 3600_000L
+        val recentReadings = readings.filter { it.timestampMillis >= cutoff }
+        val recentEntries = entries.filter { it.timestampMillis >= cutoff }.sortedBy { it.timestampMillis }
+        val currentIob = IobCobCalculator.calculateLinearIob(entries, now, settings.diaHours)
+        val currentCob = IobCobCalculator.calculateLinearCob(entries, now, settings.carbAbsorptionHours)
+        val minsAgo = latest?.let { ((now - it.timestampMillis) / 60_000L).coerceAtLeast(0L) }
+
+        HomeUiState(
+            latestGlucose = latest,
+            minutesAgo = minsAgo,
+            chartReadings = recentReadings,
+            chartEntries = recentEntries,
+            currentIob = currentIob,
+            currentCob = currentCob,
+            settings = settings,
+            chartWindowHours = windowHours
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
+
+    fun calculateBolus(bgMgDl: Int, carbsGrams: Double): BolusCalculationResult {
+        val state = homeUiState.value
+        return BolusCalculator.calculate(
+            currentBgMgDl = bgMgDl,
+            carbsGrams = carbsGrams,
+            activeIob = state.currentIob,
+            settings = state.settings
+        )
+    }
+
+    fun saveBolusAndCarbs(
+        bolusUnits: Double,
+        carbsGrams: Double,
+        note: String?,
+        bgAtTime: Int?
+    ) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val latest = homeUiState.value.latestGlucose
+            val bg = bgAtTime ?: latest?.mgDl
+            val trend = latest?.trendArrow
+
+            if (bolusUnits > 0.0) {
+                dao.insertDiaryEntry(
+                    DiaryEntryEntity(
+                        timestampMillis = now,
+                        type = DiaryEntryType.BOLUS,
+                        bolusUnits = bolusUnits,
+                        note = note?.takeIf { it.isNotBlank() },
+                        bgAtTimeMgDl = bg,
+                        trendAtTime = trend
+                    )
+                )
+            }
+            if (carbsGrams > 0.0) {
+                dao.insertDiaryEntry(
+                    DiaryEntryEntity(
+                        timestampMillis = now + 1,
+                        type = DiaryEntryType.CARBS,
+                        carbsGrams = carbsGrams,
+                        note = if (bolusUnits <= 0.0) note?.takeIf { it.isNotBlank() } else null,
+                        bgAtTimeMgDl = bg,
+                        trendAtTime = trend
+                    )
+                )
+            }
+        }
+    }
+
+    fun addQuickEntry(
+        type: DiaryEntryType,
+        bolusUnits: Double? = null,
+        carbsGrams: Double? = null,
+        basalUnits: Double? = null,
+        note: String? = null
+    ) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val latest = homeUiState.value.latestGlucose
+            dao.insertDiaryEntry(
+                DiaryEntryEntity(
+                    timestampMillis = now,
+                    type = type,
+                    bolusUnits = bolusUnits,
+                    carbsGrams = carbsGrams,
+                    basalUnits = basalUnits,
+                    note = note?.takeIf { it.isNotBlank() },
+                    bgAtTimeMgDl = latest?.mgDl,
+                    trendAtTime = latest?.trendArrow
+                )
+            )
+        }
+    }
+
+    fun updateDiaryEntry(entry: DiaryEntryEntity) {
+        viewModelScope.launch {
+            dao.updateDiaryEntry(entry)
+        }
+    }
+
+    fun deleteDiaryEntry(entry: DiaryEntryEntity) {
+        viewModelScope.launch {
+            dao.deleteDiaryEntry(entry)
+        }
+    }
+
+    fun updateSettings(newSettings: UserSettings) {
+        viewModelScope.launch {
+            settingsRepo.updateSettings(newSettings)
+        }
+    }
+
+    fun insertDemoData() {
+        viewModelScope.launch {
+            dao.clearDemoGlucose()
+            dao.clearDemoDiary()
+
+            val now = System.currentTimeMillis()
+            val readings = (0..72).map { step ->
+                val ts = now - (72 - step) * 5 * 60_000L
+                val wave = 135.0 + 35.0 * sin(step / 9.0) + (if (step > 60) (step - 60) * 4.0 else 0.0)
+                val bg = wave.toInt().coerceIn(70, 235)
+                val trend = when {
+                    step > 64 -> TrendArrow.UP
+                    step % 15 < 5 -> TrendArrow.UP_RIGHT
+                    else -> TrendArrow.FLAT
+                }
+                GlucoseReadingEntity(
+                    timestampMillis = ts,
+                    mgDl = bg,
+                    trendArrow = trend,
+                    deltaMgDl = 0.0,
+                    source = "Demo"
+                )
+            }
+            dao.insertGlucoseReadings(readings)
+
+            dao.insertDiaryEntry(
+                DiaryEntryEntity(
+                    timestampMillis = now - 4 * 3600_000L,
+                    type = DiaryEntryType.BOLUS,
+                    bolusUnits = 1.5,
+                    note = "[Demo] Frühstück",
+                    bgAtTimeMgDl = 118,
+                    trendAtTime = TrendArrow.FLAT
+                )
+            )
+            dao.insertDiaryEntry(
+                DiaryEntryEntity(
+                    timestampMillis = now - 4 * 3600_000L + 1000,
+                    type = DiaryEntryType.CARBS,
+                    carbsGrams = 30.0,
+                    note = "[Demo] Haferflocken",
+                    bgAtTimeMgDl = 118,
+                    trendAtTime = TrendArrow.FLAT
+                )
+            )
+            dao.insertDiaryEntry(
+                DiaryEntryEntity(
+                    timestampMillis = now - 60 * 60_000L,
+                    type = DiaryEntryType.BOLUS,
+                    bolusUnits = 2.0,
+                    note = "[Demo] Mittagessen",
+                    bgAtTimeMgDl = 132,
+                    trendAtTime = TrendArrow.UP_RIGHT
+                )
+            )
+            dao.insertDiaryEntry(
+                DiaryEntryEntity(
+                    timestampMillis = now - 60 * 60_000L + 1000,
+                    type = DiaryEntryType.CARBS,
+                    carbsGrams = 40.0,
+                    note = "[Demo] Pasta",
+                    bgAtTimeMgDl = 132,
+                    trendAtTime = TrendArrow.UP_RIGHT
+                )
+            )
+        }
+    }
+
+    fun clearDemoData() {
+        viewModelScope.launch {
+            dao.clearDemoGlucose()
+            dao.clearDemoDiary()
+        }
+    }
+}
