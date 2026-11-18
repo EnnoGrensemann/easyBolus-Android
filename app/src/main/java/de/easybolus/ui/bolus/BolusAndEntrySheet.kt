@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import android.app.TimePickerDialog
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -20,7 +23,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -35,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -46,6 +52,7 @@ import de.easybolus.ui.theme.FabTeal
 import de.easybolus.ui.theme.HeaderGradientBottom
 import de.easybolus.ui.theme.TextPrimary
 import de.easybolus.ui.theme.TextSecondary
+import java.util.Calendar
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,8 +62,8 @@ fun BolusAndEntrySheet(
     currentIob: Double,
     settings: UserSettings,
     onDismiss: () -> Unit,
-    onSaveBolusAndCarbs: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit,
-    onAddQuickEntry: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?) -> Unit
+    onSaveBolusAndCarbs: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?, timestampMillis: Long) -> Unit,
+    onAddQuickEntry: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -94,18 +101,18 @@ fun BolusAndEntrySheet(
                     currentIob = currentIob,
                     settings = settings,
                     onSave = { bolus, carbs, note, bg ->
-                        onSaveBolusAndCarbs(bolus, carbs, note, bg)
+                        onSaveBolusAndCarbs(bolus, carbs, note, bg, System.currentTimeMillis())
                         onDismiss()
                     }
                 )
             } else {
                 QuickEntryTab(
-                    onSave = { type, bolus, carbs, basal, note ->
-                        onAddQuickEntry(type, bolus, carbs, basal, note)
+                    onSave = { type, bolus, carbs, basal, note, timestampMillis ->
+                        onAddQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
                         onDismiss()
                     },
-                    onSaveCombo = { bolus, carbs, note ->
-                        onSaveBolusAndCarbs(bolus, carbs, note, null)
+                    onSaveCombo = { bolus, carbs, note, timestampMillis ->
+                        onSaveBolusAndCarbs(bolus, carbs, note, null, timestampMillis)
                         onDismiss()
                     }
                 )
@@ -270,14 +277,31 @@ private enum class QuickEntryMode(val label: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickEntryTab(
-    onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?) -> Unit,
-    onSaveCombo: (bolus: Double, carbs: Double, note: String?) -> Unit
+    onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit,
+    onSaveCombo: (bolus: Double, carbs: Double, note: String?, timestampMillis: Long) -> Unit
 ) {
+    val context = LocalContext.current
+    val initialCal = remember { Calendar.getInstance() }
+    var selectedHour by remember { mutableIntStateOf(initialCal.get(Calendar.HOUR_OF_DAY)) }
+    var selectedMinute by remember { mutableIntStateOf(initialCal.get(Calendar.MINUTE)) }
+    var isYesterday by remember { mutableStateOf(false) }
+
     var selectedMode by remember { mutableStateOf(QuickEntryMode.CARBS_AND_BOLUS) }
     var valueInput by remember { mutableStateOf("") }
     var carbsInput by remember { mutableStateOf("") }
     var bolusInput by remember { mutableStateOf("") }
     var noteInput by remember { mutableStateOf("") }
+
+    fun buildTimestampMillis(): Long {
+        val cal = Calendar.getInstance().apply {
+            if (isYesterday) add(Calendar.DAY_OF_YEAR, -1)
+            set(Calendar.HOUR_OF_DAY, selectedHour)
+            set(Calendar.MINUTE, selectedMinute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
 
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -296,6 +320,45 @@ private fun QuickEntryTab(
                 label = { Text(mode.label, fontSize = 12.sp) }
             )
         }
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // Uhrzeit & Tag (Heute / Gestern) zum Nachtragen auswählen
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = {
+                TimePickerDialog(
+                    context,
+                    { _, hour, minute ->
+                        selectedHour = hour
+                        selectedMinute = minute
+                    },
+                    selectedHour,
+                    selectedMinute,
+                    true
+                ).show()
+            },
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Schedule,
+                contentDescription = "Uhrzeit wählen",
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Text(String.format(Locale.GERMANY, "Uhrzeit: %02d:%02d", selectedHour, selectedMinute))
+        }
+
+        FilterChip(
+            selected = isYesterday,
+            onClick = { isYesterday = !isYesterday },
+            label = { Text(if (isYesterday) "Gestern" else "Heute") }
+        )
     }
 
     Spacer(modifier = Modifier.height(12.dp))
@@ -354,19 +417,20 @@ private fun QuickEntryTab(
 
     Button(
         onClick = {
+            val ts = buildTimestampMillis()
             if (selectedMode == QuickEntryMode.CARBS_AND_BOLUS) {
                 val carbs = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
                 val bolus = bolusInput.replace(',', '.').toDoubleOrNull() ?: 0.0
                 if (carbs > 0.0 || bolus > 0.0) {
-                    onSaveCombo(bolus, carbs, noteInput)
+                    onSaveCombo(bolus, carbs, noteInput, ts)
                 }
             } else {
                 val num = valueInput.replace(',', '.').toDoubleOrNull()
                 when (selectedMode) {
-                    QuickEntryMode.BOLUS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BOLUS, num, null, null, noteInput)
-                    QuickEntryMode.CARBS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.CARBS, null, num, null, noteInput)
-                    QuickEntryMode.BASAL -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BASAL, null, null, num, noteInput)
-                    QuickEntryMode.NOTE -> if (noteInput.isNotBlank()) onSave(DiaryEntryType.NOTE, null, null, null, noteInput)
+                    QuickEntryMode.BOLUS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BOLUS, num, null, null, noteInput, ts)
+                    QuickEntryMode.CARBS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.CARBS, null, num, null, noteInput, ts)
+                    QuickEntryMode.BASAL -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BASAL, null, null, num, noteInput, ts)
+                    QuickEntryMode.NOTE -> if (noteInput.isNotBlank()) onSave(DiaryEntryType.NOTE, null, null, null, noteInput, ts)
                     QuickEntryMode.CARBS_AND_BOLUS -> Unit
                 }
             }

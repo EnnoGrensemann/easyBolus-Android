@@ -95,18 +95,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         bolusUnits: Double,
         carbsGrams: Double,
         note: String?,
-        bgAtTime: Int?
+        bgAtTime: Int?,
+        timestampMillis: Long = System.currentTimeMillis()
     ) {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val latest = homeUiState.value.latestGlucose
-            val bg = bgAtTime ?: latest?.mgDl
-            val trend = latest?.trendArrow
+            val state = homeUiState.value
+            val matchedReading = state.chartReadings
+                .minByOrNull { kotlin.math.abs(it.timestampMillis - timestampMillis) }
+                ?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
+                ?: state.latestGlucose?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
+            val bg = bgAtTime ?: matchedReading?.mgDl
+            val trend = matchedReading?.trendArrow
 
             if (bolusUnits > 0.0) {
                 dao.insertDiaryEntry(
                     DiaryEntryEntity(
-                        timestampMillis = now,
+                        timestampMillis = timestampMillis,
                         type = DiaryEntryType.BOLUS,
                         bolusUnits = bolusUnits,
                         note = note?.takeIf { it.isNotBlank() },
@@ -118,7 +122,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (carbsGrams > 0.0) {
                 dao.insertDiaryEntry(
                     DiaryEntryEntity(
-                        timestampMillis = now + 1,
+                        timestampMillis = timestampMillis + 1,
                         type = DiaryEntryType.CARBS,
                         carbsGrams = carbsGrams,
                         note = if (bolusUnits <= 0.0) note?.takeIf { it.isNotBlank() } else null,
@@ -135,21 +139,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         bolusUnits: Double? = null,
         carbsGrams: Double? = null,
         basalUnits: Double? = null,
-        note: String? = null
+        note: String? = null,
+        timestampMillis: Long = System.currentTimeMillis()
     ) {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val latest = homeUiState.value.latestGlucose
+            val state = homeUiState.value
+            val matchedReading = state.chartReadings
+                .minByOrNull { kotlin.math.abs(it.timestampMillis - timestampMillis) }
+                ?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
+                ?: state.latestGlucose?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
             dao.insertDiaryEntry(
                 DiaryEntryEntity(
-                    timestampMillis = now,
+                    timestampMillis = timestampMillis,
                     type = type,
                     bolusUnits = bolusUnits,
                     carbsGrams = carbsGrams,
                     basalUnits = basalUnits,
                     note = note?.takeIf { it.isNotBlank() },
-                    bgAtTimeMgDl = latest?.mgDl,
-                    trendAtTime = latest?.trendArrow
+                    bgAtTimeMgDl = matchedReading?.mgDl,
+                    trendAtTime = matchedReading?.trendArrow
                 )
             )
         }

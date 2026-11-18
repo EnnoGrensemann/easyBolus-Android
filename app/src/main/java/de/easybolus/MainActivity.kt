@@ -110,11 +110,11 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
             currentIob = homeState.currentIob,
             settings = settings,
             onDismiss = { showBolusSheet = false },
-            onSaveBolusAndCarbs = { bolus, carbs, note, bg ->
-                viewModel.saveBolusAndCarbs(bolus, carbs, note, bg)
+            onSaveBolusAndCarbs = { bolus, carbs, note, bg, timestampMillis ->
+                viewModel.saveBolusAndCarbs(bolus, carbs, note, bg, timestampMillis)
             },
-            onAddQuickEntry = { type, bolus, carbs, basal, note ->
-                viewModel.addQuickEntry(type, bolus, carbs, basal, note)
+            onAddQuickEntry = { type, bolus, carbs, basal, note, timestampMillis ->
+                viewModel.addQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
             }
         )
     }
