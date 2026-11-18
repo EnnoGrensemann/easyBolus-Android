@@ -2,6 +2,8 @@ package de.easybolus.ui.bolus
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -253,54 +255,93 @@ private fun BreakdownRow(label: String, value: Double) {
     }
 }
 
+private enum class QuickEntryMode(val label: String) {
+    CARBS_AND_BOLUS("KH + IE"),
+    CARBS(DiaryEntryType.CARBS.label),
+    BOLUS(DiaryEntryType.BOLUS.label),
+    BASAL(DiaryEntryType.BASAL.label),
+    NOTE(DiaryEntryType.NOTE.label)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickEntryTab(
-    onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?) -> Unit
+    onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?) -> Unit,
+    onSaveCombo: (bolus: Double, carbs: Double, note: String?) -> Unit
 ) {
-    var selectedType by remember { mutableStateOf(DiaryEntryType.CARBS) }
+    var selectedMode by remember { mutableStateOf(QuickEntryMode.CARBS_AND_BOLUS) }
     var valueInput by remember { mutableStateOf("") }
+    var carbsInput by remember { mutableStateOf("") }
+    var bolusInput by remember { mutableStateOf("") }
     var noteInput by remember { mutableStateOf("") }
 
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        DiaryEntryType.entries.forEach { type ->
+        QuickEntryMode.entries.forEach { mode ->
             FilterChip(
-                selected = selectedType == type,
+                selected = selectedMode == mode,
                 onClick = {
-                    selectedType = type
+                    selectedMode = mode
                     valueInput = ""
+                    carbsInput = ""
+                    bolusInput = ""
                 },
-                label = { Text(type.label, fontSize = 12.sp) }
+                label = { Text(mode.label, fontSize = 12.sp) }
             )
         }
     }
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    if (selectedType != DiaryEntryType.NOTE) {
-        val label = when (selectedType) {
-            DiaryEntryType.BOLUS -> "Bolus (IE)"
-            DiaryEntryType.CARBS -> "Kohlenhydrate (g)"
-            DiaryEntryType.BASAL -> "Basalinsulin (IE)"
-            DiaryEntryType.NOTE -> ""
+    when (selectedMode) {
+        QuickEntryMode.CARBS_AND_BOLUS -> {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = carbsInput,
+                    onValueChange = { carbsInput = it },
+                    label = { Text("Kohlenhydrate (g)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = bolusInput,
+                    onValueChange = { bolusInput = it },
+                    label = { Text("Bolus (IE)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
         }
-        OutlinedTextField(
-            value = valueInput,
-            onValueChange = { valueInput = it },
-            label = { Text(label) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
+        QuickEntryMode.NOTE -> Unit
+        else -> {
+            val label = when (selectedMode) {
+                QuickEntryMode.BOLUS -> "Bolus (IE)"
+                QuickEntryMode.CARBS -> "Kohlenhydrate (g)"
+                QuickEntryMode.BASAL -> "Basalinsulin (IE)"
+                else -> ""
+            }
+            OutlinedTextField(
+                value = valueInput,
+                onValueChange = { valueInput = it },
+                label = { Text(label) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
     }
 
     OutlinedTextField(
         value = noteInput,
         onValueChange = { noteInput = it },
-        label = { Text(if (selectedType == DiaryEntryType.NOTE) "Notiz / Sport / Ereignis" else "Notiz (optional)") },
+        label = { Text(if (selectedMode == QuickEntryMode.NOTE) "Notiz / Sport / Ereignis" else "Notiz (optional)") },
         singleLine = false,
         modifier = Modifier.fillMaxWidth()
     )
@@ -309,12 +350,21 @@ private fun QuickEntryTab(
 
     Button(
         onClick = {
-            val num = valueInput.replace(',', '.').toDoubleOrNull()
-            when (selectedType) {
-                DiaryEntryType.BOLUS -> if ((num ?: 0.0) > 0.0) onSave(selectedType, num, null, null, noteInput)
-                DiaryEntryType.CARBS -> if ((num ?: 0.0) > 0.0) onSave(selectedType, null, num, null, noteInput)
-                DiaryEntryType.BASAL -> if ((num ?: 0.0) > 0.0) onSave(selectedType, null, null, num, noteInput)
-                DiaryEntryType.NOTE -> if (noteInput.isNotBlank()) onSave(selectedType, null, null, null, noteInput)
+            if (selectedMode == QuickEntryMode.CARBS_AND_BOLUS) {
+                val carbs = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+                val bolus = bolusInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+                if (carbs > 0.0 || bolus > 0.0) {
+                    onSaveCombo(bolus, carbs, noteInput)
+                }
+            } else {
+                val num = valueInput.replace(',', '.').toDoubleOrNull()
+                when (selectedMode) {
+                    QuickEntryMode.BOLUS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BOLUS, num, null, null, noteInput)
+                    QuickEntryMode.CARBS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.CARBS, null, num, null, noteInput)
+                    QuickEntryMode.BASAL -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BASAL, null, null, num, noteInput)
+                    QuickEntryMode.NOTE -> if (noteInput.isNotBlank()) onSave(DiaryEntryType.NOTE, null, null, null, noteInput)
+                    QuickEntryMode.CARBS_AND_BOLUS -> Unit
+                }
             }
         },
         colors = ButtonDefaults.buttonColors(containerColor = FabTeal),
