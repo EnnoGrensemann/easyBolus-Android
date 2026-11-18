@@ -103,6 +103,10 @@ fun BolusAndEntrySheet(
                     onSave = { type, bolus, carbs, basal, note ->
                         onAddQuickEntry(type, bolus, carbs, basal, note)
                         onDismiss()
+                    },
+                    onSaveCombo = { bolus, carbs, note ->
+                        onSaveBolusAndCarbs(bolus, carbs, note, null)
+                        onDismiss()
                     }
                 )
             }
