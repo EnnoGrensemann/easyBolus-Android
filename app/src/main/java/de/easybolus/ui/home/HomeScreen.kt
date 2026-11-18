@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -37,10 +38,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.easybolus.ui.HomeUiState
+import de.easybolus.ui.theme.BgHighOrange
+import de.easybolus.ui.theme.BgInRangeGreen
+import de.easybolus.ui.theme.BgLowRed
 import de.easybolus.ui.theme.CobPillBg
 import de.easybolus.ui.theme.FabTeal
 import de.easybolus.ui.theme.HeaderGradientBottom
@@ -119,29 +124,57 @@ fun HomeScreen(
                     Column(
                         horizontalAlignment = Alignment.Start
                     ) {
-                        val bgText = uiState.latestGlucose?.mgDl?.toString() ?: "--"
+                        val latestBg = uiState.latestGlucose?.mgDl
+                        val bgText = latestBg?.toString() ?: "--"
                         val arrowText = uiState.latestGlucose?.trendArrow?.symbol ?: ""
+                        val statusDotColor = when {
+                            latestBg == null -> Color.White.copy(alpha = 0.4f)
+                            latestBg < uiState.settings.targetRangeMin -> BgLowRed
+                            latestBg > uiState.settings.targetRangeMax -> BgHighOrange
+                            else -> BgInRangeGreen
+                        }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(statusDotColor)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = bgText,
                                 color = Color.White,
-                                fontSize = 56.sp,
-                                fontWeight = FontWeight.Normal,
-                                letterSpacing = (-2).sp
+                                style = TextStyle(
+                                    fontSize = 54.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    letterSpacing = (-2).sp,
+                                    fontFeatureSettings = "tnum"
+                                )
                             )
-                            if (arrowText.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (arrowText.isNotEmpty()) {
+                                    Text(
+                                        text = arrowText,
+                                        color = Color.White.copy(alpha = 0.92f),
+                                        fontSize = 34.sp,
+                                        fontWeight = FontWeight.Light
+                                    )
+                                }
                                 Text(
-                                    text = arrowText,
-                                    color = Color.White.copy(alpha = 0.92f),
-                                    fontSize = 38.sp,
-                                    fontWeight = FontWeight.Light
+                                    text = "mg/dl",
+                                    color = Color.White.copy(alpha = 0.68f),
+                                    fontSize = 11.sp
                                 )
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        val isStale = (uiState.minutesAgo ?: 0L) >= 15L
                         val timeLabel = when (val mins = uiState.minutesAgo) {
                             null -> "Warte auf Juggluco-Broadcast…"
                             0L -> "gerade eben"
@@ -149,8 +182,9 @@ fun HomeScreen(
                         }
                         Text(
                             text = timeLabel,
-                            color = Color.White.copy(alpha = 0.82f),
-                            fontSize = 13.sp
+                            color = if (isStale) Color(0xFFFDE68A) else Color.White.copy(alpha = 0.82f),
+                            fontSize = 13.sp,
+                            fontWeight = if (isStale) FontWeight.Medium else FontWeight.Normal
                         )
                     }
 
@@ -210,7 +244,7 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(84.dp)
+                .height(74.dp)
                 .padding(bottom = 4.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -228,7 +262,7 @@ fun HomeScreen(
                     defaultElevation = 4.dp,
                     pressedElevation = 6.dp
                 ),
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(54.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -269,8 +303,11 @@ private fun StatusPill(
             Text(
                 text = text,
                 color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
+                style = TextStyle(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFeatureSettings = "tnum"
+                )
             )
         }
     }

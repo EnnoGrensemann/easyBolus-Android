@@ -169,7 +169,26 @@ private fun BolusCalculatorTab(
         )
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // KH-Schnelltasten
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        listOf(10, 15, 30).forEach { addGrams ->
+            FilterChip(
+                selected = false,
+                onClick = {
+                    val updated = (carbsVal + addGrams).toInt()
+                    carbsInput = updated.toString()
+                },
+                label = { Text("+${addGrams} g", fontSize = 12.sp) }
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
 
     // Berechnungskarte
     Card(
@@ -178,6 +197,15 @@ private fun BolusCalculatorTab(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            if (settings.useHourlyCarbRatio) {
+                Text(
+                    text = String.format(Locale.GERMANY, "Aktiver Stundenfaktor (%02d:00 Uhr): %.1f g/IE", currentHour, activeCarbRatio),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
             BreakdownRow("Mahlzeiten-Bolus (${carbsVal.toInt()} g / $activeCarbRatio)", result.mealBolus)
             BreakdownRow("Korrektur (${bgVal} → ${settings.targetBg} mg/dl)", result.correctionBolus)
             BreakdownRow("Aktives Insulin (IOB)", -result.activeIob)
@@ -212,14 +240,41 @@ private fun BolusCalculatorTab(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    OutlinedTextField(
-        value = manualOverride,
-        onValueChange = { manualOverride = it },
-        label = { Text("Tatsächlich gespritzter Bolus (IE)") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
-    )
+    // Bolus-Eingabe mit - / + Stepper in Pen-Schrittweite
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = {
+                val cur = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
+                val next = (cur - settings.penStepSize).coerceAtLeast(0.0)
+                manualOverride = String.format(Locale.US, "%.1f", next)
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("−", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedTextField(
+            value = manualOverride,
+            onValueChange = { manualOverride = it },
+            label = { Text("Gespritzter Bolus (IE)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(
+            onClick = {
+                val cur = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
+                val next = cur + settings.penStepSize
+                manualOverride = String.format(Locale.US, "%.1f", next)
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+    }
 
     Spacer(modifier = Modifier.height(10.dp))
 

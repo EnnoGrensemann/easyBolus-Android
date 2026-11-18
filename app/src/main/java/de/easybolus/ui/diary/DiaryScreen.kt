@@ -2,6 +2,7 @@ package de.easybolus.ui.diary
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +66,7 @@ import de.easybolus.ui.theme.HeaderGradientTop
 import de.easybolus.ui.theme.HeaderGradientTopDark
 import de.easybolus.ui.theme.NoteMarkerSlate
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -119,23 +124,98 @@ fun DiaryScreen(
                 )
             }
         } else {
-            LazyColumn(
+            var activeFilter by remember { mutableStateOf<DiaryEntryType?>(null) }
+            val filteredEntries = remember(entries, activeFilter) {
+                if (activeFilter == null) entries else entries.filter { it.type == activeFilter }
+            }
+            val dayFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
+            val displayDayFormat = remember { SimpleDateFormat("EEEE, dd.MM.yyyy", Locale.GERMANY) }
+            val todayKey = remember { dayFormat.format(Date()) }
+            val yesterdayKey = remember {
+                Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.time.let { dayFormat.format(it) }
+            }
+            val groupedDays = remember(filteredEntries) {
+                filteredEntries.groupBy { dayFormat.format(Date(it.timestampMillis)) }
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                item { Spacer(modifier = Modifier.height(12.dp)) }
-                itemsIndexed(entries, key = { _, item -> item.id }) { index, entry ->
-                    TimelineEntryRow(
-                        entry = entry,
-                        isFirst = index == 0,
-                        isLast = index == entries.lastIndex,
-                        onClick = { editingEntry = entry }
+                // Filter-Chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = activeFilter == null,
+                        onClick = { activeFilter = null },
+                        label = { Text("Alle") }
                     )
+                    DiaryEntryType.entries.forEach { type ->
+                        FilterChip(
+                            selected = activeFilter == type,
+                            onClick = { activeFilter = if (activeFilter == type) null else type },
+                            label = { Text(type.label) }
+                        )
+                    }
                 }
-                item { Spacer(modifier = Modifier.height(24.dp)) }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    groupedDays.forEach { (dayKey, dayEntries) ->
+                        val dayTitle = when (dayKey) {
+                            todayKey -> "Heute"
+                            yesterdayKey -> "Gestern"
+                            else -> displayDayFormat.format(Date(dayEntries.first().timestampMillis))
+                        }
+                        val totalBolus = dayEntries.sumOf { it.bolusUnits ?: 0.0 }
+                        val totalCarbs = dayEntries.sumOf { it.carbsGrams ?: 0.0 }
+
+                        item(key = "header_$dayKey") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = dayTitle,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Text(
+                                    text = String.format(Locale.GERMANY, "%.1f IE · %.0f g KH", totalBolus, totalCarbs),
+                                    style = TextStyle(
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontFeatureSettings = "tnum"
+                                    )
+                                )
+                            }
+                        }
+
+                        itemsIndexed(dayEntries, key = { _, item -> item.id }) { index, entry ->
+                            TimelineEntryRow(
+                                entry = entry,
+                                isFirst = index == 0,
+                                isLast = index == dayEntries.lastIndex,
+                                onClick = { editingEntry = entry }
+                            )
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
+                }
             }
         }
     }
