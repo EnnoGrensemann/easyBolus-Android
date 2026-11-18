@@ -53,4 +53,36 @@ class BolusCalculatorTest {
         assertEquals(0.0, result.rawTotal, 0.001)
         assertEquals(0.0, result.recommendedUnits, 0.001)
     }
+
+    @Test
+    fun usesHourlyCarbRatioWhenEnabled() {
+        val hourly = MutableList(24) { 10.0 }.apply {
+            this[7] = 8.0
+            this[13] = 12.0
+        }
+        val settings = defaultSettings.copy(
+            useHourlyCarbRatio = true,
+            hourlyCarbRatios = hourly
+        )
+
+        val morning = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 40.0,
+            activeIob = 0.0,
+            settings = settings,
+            hourOfDay = 7
+        )
+        assertEquals(5.0, morning.mealBolus, 0.001)
+        assertEquals(5.0, morning.recommendedUnits, 0.001)
+
+        val afternoon = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 36.0,
+            activeIob = 0.0,
+            settings = settings,
+            hourOfDay = 13
+        )
+        assertEquals(3.0, afternoon.mealBolus, 0.001)
+        assertEquals(3.0, afternoon.recommendedUnits, 0.001)
+    }
 }

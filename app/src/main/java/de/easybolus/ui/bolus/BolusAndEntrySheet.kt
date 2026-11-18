@@ -121,12 +121,15 @@ private fun BolusCalculatorTab(
 
     val bgVal = bgInput.toIntOrNull() ?: initialBg
     val carbsVal = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val currentHour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
+    val activeCarbRatio = settings.carbRatioForHour(currentHour)
 
     val result = BolusCalculator.calculate(
         currentBgMgDl = bgVal,
         carbsGrams = carbsVal,
         activeIob = currentIob,
-        settings = settings
+        settings = settings,
+        hourOfDay = currentHour
     )
 
     var manualOverride by remember(result.recommendedUnits) {
@@ -161,7 +164,7 @@ private fun BolusCalculatorTab(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            BreakdownRow("Mahlzeiten-Bolus (${carbsVal.toInt()} g / ${settings.carbRatio})", result.mealBolus)
+            BreakdownRow("Mahlzeiten-Bolus (${carbsVal.toInt()} g / $activeCarbRatio)", result.mealBolus)
             BreakdownRow("Korrektur (${bgVal} → ${settings.targetBg} mg/dl)", result.correctionBolus)
             BreakdownRow("Aktives Insulin (IOB)", -result.activeIob)
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

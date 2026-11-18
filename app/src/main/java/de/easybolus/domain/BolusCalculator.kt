@@ -1,6 +1,7 @@
 package de.easybolus.domain
 
 import de.easybolus.data.settings.UserSettings
+import java.util.Calendar
 import kotlin.math.max
 import kotlin.math.round
 
@@ -16,7 +17,7 @@ object BolusCalculator {
 
     /**
      * Vereinfachter Pen-Bolusrechner:
-     * - Feste Faktoren (KH-Faktor, ISF, Zielwert)
+     * - Feste oder stündliche Faktoren (KH-Faktor, ISF, Zielwert)
      * - Lineares IOB wird abgezogen
      * - Kein COB-Abzug
      * - Rundung auf Pen-Schrittweite (0,5 IE oder 1,0 IE)
@@ -25,10 +26,12 @@ object BolusCalculator {
         currentBgMgDl: Int,
         carbsGrams: Double,
         activeIob: Double,
-        settings: UserSettings
+        settings: UserSettings,
+        hourOfDay: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     ): BolusCalculationResult {
-        val mealBolus = if (carbsGrams > 0.0 && settings.carbRatio > 0.0) {
-            carbsGrams / settings.carbRatio
+        val activeCarbRatio = settings.carbRatioForHour(hourOfDay)
+        val mealBolus = if (carbsGrams > 0.0 && activeCarbRatio > 0.0) {
+            carbsGrams / activeCarbRatio
         } else {
             0.0
         }

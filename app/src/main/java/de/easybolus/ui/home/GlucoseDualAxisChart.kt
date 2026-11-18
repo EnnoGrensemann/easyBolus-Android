@@ -3,7 +3,6 @@ package de.easybolus.ui.home
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -48,7 +47,6 @@ fun GlucoseDualAxisChart(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(310.dp)
     ) {
         val leftPad = 48.dp.toPx()
         val rightPad = 42.dp.toPx()
