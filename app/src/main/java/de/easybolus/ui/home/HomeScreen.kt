@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,15 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +53,6 @@ import de.easybolus.ui.theme.BgHighOrange
 import de.easybolus.ui.theme.BgInRangeGreen
 import de.easybolus.ui.theme.BgLowRed
 import de.easybolus.ui.theme.CobPillBg
-import de.easybolus.ui.theme.FabTeal
 import de.easybolus.ui.theme.HeaderGradientTop
 import de.easybolus.ui.theme.HeaderGradientTopDark
 import de.easybolus.ui.theme.IobPillBg
@@ -67,7 +64,6 @@ import kotlin.math.roundToInt
 fun HomeScreen(
     uiState: HomeUiState,
     onOpenSettings: () -> Unit,
-    onOpenBolusSheet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
@@ -77,6 +73,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -218,14 +215,14 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. Dual-Axis Chart
+            // 3. Dual-Axis Chart füllt den restlichen Platz sauber bis zur Navigationsleiste
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
+                    .padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
             ) {
                 if (uiState.chartReadings.isEmpty() && uiState.chartEntries.isEmpty()) {
                     Box(
@@ -249,33 +246,6 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 4.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // 4. Teal FAB (+) mittig unten mit genügend Platz für den Schatten
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(74.dp)
-                    .padding(bottom = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                FloatingActionButton(
-                    onClick = onOpenBolusSheet,
-                    containerColor = FabTeal,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(18.dp),
-                    elevation = FloatingActionButtonDefaults.elevation(
-                        defaultElevation = 4.dp,
-                        pressedElevation = 6.dp
-                    ),
-                    modifier = Modifier.size(54.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Bolus berechnen oder Eintrag hinzufügen",
-                        modifier = Modifier.size(28.dp)
                     )
                 }
             }

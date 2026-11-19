@@ -5,8 +5,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
@@ -14,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,8 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.easybolus.domain.CsvExporter
 import de.easybolus.ui.MainViewModel
@@ -33,6 +43,7 @@ import de.easybolus.ui.diary.DiaryScreen
 import de.easybolus.ui.home.HomeScreen
 import de.easybolus.ui.settings.SettingsScreen
 import de.easybolus.ui.theme.EasyBolusTheme
+import de.easybolus.ui.theme.FabTeal
 
 private enum class AppScreen {
     HOME, DIARY, SETTINGS
@@ -84,6 +95,32 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
                         icon = { Icon(Icons.Default.Home, contentDescription = "Startseite") },
                         label = { Text("Startseite") }
                     )
+                    Box(
+                        modifier = Modifier
+                            .weight(0.85f)
+                            .height(64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            onClick = { showBolusSheet = true },
+                            color = FabTeal,
+                            contentColor = Color.White,
+                            shape = RoundedCornerShape(16.dp),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier.size(width = 58.dp, height = 46.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Bolus berechnen oder Eintrag hinzufügen",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    }
                     NavigationBarItem(
                         selected = currentScreen == AppScreen.DIARY,
                         onClick = { currentScreen = AppScreen.DIARY },
@@ -98,7 +135,6 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
                 AppScreen.HOME -> HomeScreen(
                     uiState = homeState,
                     onOpenSettings = { currentScreen = AppScreen.SETTINGS },
-                    onOpenBolusSheet = { showBolusSheet = true },
                     modifier = bottomModifier
                 )
                 AppScreen.DIARY -> DiaryScreen(
