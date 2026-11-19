@@ -87,7 +87,7 @@ fun GlucoseDualAxisChart(
     val horizontalGridColor = if (isDark) Color(0xFF232323) else Color(0xFFF1F5F9)
     val axisBorderColor = if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)
     val targetBandColor = if (isDark) TargetBandGreenDark else TargetBandGreen
-    val targetLineColor = if (isDark) BgInRangeGreen.copy(alpha = 0.65f) else BgInRangeGreen.copy(alpha = 0.72f)
+    val targetLineColor = if (isDark) Color(0xFFE0F2FE).copy(alpha = 0.88f) else Color(0xFF0F4C5C).copy(alpha = 0.82f)
 
     Box(modifier = modifier) {
         Canvas(
@@ -181,7 +181,7 @@ fun GlucoseDualAxisChart(
             fun yForIns(ie: Float): Float =
                 topPad + chartH - ((ie - insMin) / (insMax - insMin)).coerceIn(0f, 1f) * chartH
 
-            // 1. Grünes Zielbereich-Band + dezente gestrichelte Zielwert-Linie
+            // 1. Zielbereich-Band + deutliche gestrichelte Zielwert-Linie
             val bandTop = yForBg(settings.targetRangeMax.toFloat())
             val bandBottom = yForBg(settings.targetRangeMin.toFloat())
             drawRect(
@@ -194,8 +194,21 @@ fun GlucoseDualAxisChart(
                 color = targetLineColor,
                 start = Offset(leftPad, targetY),
                 end = Offset(leftPad + chartW, targetY),
-                strokeWidth = 1.2.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+                strokeWidth = 1.8.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f))
+            )
+            val targetLabelPaint = Paint().apply {
+                color = targetLineColor.toArgb()
+                textSize = 9.5.dp.toPx()
+                isAntiAlias = true
+                textAlign = Paint.Align.LEFT
+                isFakeBoldText = true
+            }
+            drawContext.canvas.nativeCanvas.drawText(
+                "Ziel ${settings.targetBg}",
+                leftPad + 6.dp.toPx(),
+                targetY - 4.dp.toPx(),
+                targetLabelPaint
             )
 
             // 2. Vertikale Zeit-Gitterlinien & X-Achsen-Labels auf vollen oder halben Stunden

@@ -26,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -262,11 +261,6 @@ fun HomeScreen(
                     .padding(bottom = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 FloatingActionButton(
                     onClick = onOpenBolusSheet,
                     containerColor = FabTeal,
@@ -347,45 +341,42 @@ private fun StatsSummaryCard(
                 }
             }
 
-            // TIR-Farbbalken + Low / Ziel / High Prozentwerte
+            // TIR-Farbbalken mit klaren Trennlinien + Low / Ziel / High Prozentwerte
             val lowPct = stats.timeBelowPercent ?: 0.0
             val inPct = stats.timeInRangePercent ?: 0.0
             val highPct = stats.timeAbovePercent ?: 0.0
             val hasReadings = stats.readingCount > 0
+            val segments = buildList {
+                if (hasReadings) {
+                    if (lowPct > 0.0) add(lowPct.toFloat().coerceAtLeast(0.01f) to BgLowRed)
+                    if (inPct > 0.0) add(inPct.toFloat().coerceAtLeast(0.01f) to BgInRangeGreen)
+                    if (highPct > 0.0) add(highPct.toFloat().coerceAtLeast(0.01f) to BgHighOrange)
+                }
+            }
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    if (hasReadings) {
-                        if (lowPct > 0.0) {
+                    segments.forEachIndexed { index, (weightVal, segColor) ->
+                        if (index > 0) {
                             Box(
                                 modifier = Modifier
-                                    .weight(lowPct.toFloat().coerceAtLeast(0.01f))
+                                    .width(2.dp)
                                     .fillMaxHeight()
-                                    .background(BgLowRed)
+                                    .background(MaterialTheme.colorScheme.surface)
                             )
                         }
-                        if (inPct > 0.0) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(inPct.toFloat().coerceAtLeast(0.01f))
-                                    .fillMaxHeight()
-                                    .background(BgInRangeGreen)
-                            )
-                        }
-                        if (highPct > 0.0) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(highPct.toFloat().coerceAtLeast(0.01f))
-                                    .fillMaxHeight()
-                                    .background(BgHighOrange)
-                            )
-                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(weightVal)
+                                .fillMaxHeight()
+                                .background(segColor)
+                        )
                     }
                 }
 
@@ -393,20 +384,20 @@ private fun StatsSummaryCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
+                    TirLegendLabel(
+                        dotColor = BgLowRed,
                         text = if (hasReadings) "Low ${lowPct.roundToInt()}%" else "Low --",
-                        color = BgLowRed,
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = "tnum")
+                        bold = false
                     )
-                    Text(
+                    TirLegendLabel(
+                        dotColor = BgInRangeGreen,
                         text = if (hasReadings) "TIR ${inPct.roundToInt()}%" else "TIR --",
-                        color = BgInRangeGreen,
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum")
+                        bold = true
                     )
-                    Text(
+                    TirLegendLabel(
+                        dotColor = BgHighOrange,
                         text = if (hasReadings) "High ${highPct.roundToInt()}%" else "High --",
-                        color = BgHighOrange,
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = "tnum")
+                        bold = false
                     )
                 }
             }
@@ -479,6 +470,34 @@ private fun StatMetricItem(
                 style = TextStyle(fontSize = 9.sp, fontFeatureSettings = "tnum")
             )
         }
+    }
+}
+
+@Composable
+private fun TirLegendLabel(
+    dotColor: Color,
+    text: String,
+    bold: Boolean
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(dotColor)
+        )
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = TextStyle(
+                fontSize = 11.sp,
+                fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Medium,
+                fontFeatureSettings = "tnum"
+            )
+        )
     }
 }
 

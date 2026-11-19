@@ -10,10 +10,10 @@ val CobPillBg = Color(0xFF49946E)
 
 val FabTeal = Color(0xFF42BCA8)
 
-val TargetBandGreen = Color(0x4477DF79)
-val BgInRangeGreen = Color(0xFF18C918)
-val BgHighOrange = Color(0xFFFF8C00)
-val BgLowRed = Color(0xFFE53935)
+val TargetBandGreen = Color(0x3300A884)
+val BgInRangeGreen = Color(0xFF00A884)
+val BgHighOrange = Color(0xFFFFB300)
+val BgLowRed = Color(0xFFD81B60)
 
 val IobCurveBlue = Color(0xFF2B7CE9)
 val IobAreaBlue = Color(0x552196F3)
@@ -35,7 +35,7 @@ val SurfaceDark = Color(0xFF121212)
 val CardDark = Color(0xFF1E1E1E)
 val TextPrimaryDark = Color(0xFFF3F4F6)
 val TextSecondaryDark = Color(0xFFA1A1AA)
-val TargetBandGreenDark = Color(0x2E77DF79)
+val TargetBandGreenDark = Color(0x2800A884)
 
 val TealContainerLight = Color(0xFFD6F2EE)
 val OnTealContainerLight = Color(0xFF0F4C5C)
