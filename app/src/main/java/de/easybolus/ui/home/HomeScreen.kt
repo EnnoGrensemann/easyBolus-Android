@@ -215,14 +215,14 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. Dual-Axis Chart füllt den restlichen Platz sauber bis zur Navigationsleiste
+            // 3. Dual-Axis Chart endet sauber mit Abstand oberhalb des FAB
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+                    .padding(start = 12.dp, end = 12.dp, bottom = 90.dp)
             ) {
                 if (uiState.chartReadings.isEmpty() && uiState.chartEntries.isEmpty()) {
                     Box(
