@@ -14,14 +14,32 @@ import de.easybolus.domain.BolusCalculationResult
 import de.easybolus.domain.BolusCalculator
 import de.easybolus.domain.IobCobCalculator
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import kotlin.math.sin
+
+enum class StatsPeriod(val label: String) {
+    TODAY("Heute"),
+    HOURS_24("24h"),
+    DAYS_7("7 Tage")
+}
+
+data class PeriodStats(
+    val readingCount: Int = 0,
+    val averageBg: Double? = null,
+    val gmiPercent: Double? = null,
+    val timeInRangePercent: Double? = null,
+    val timeBelowPercent: Double? = null,
+    val timeAbovePercent: Double? = null,
+    val totalBolusUnits: Double = 0.0,
+    val avgDailyBolusUnits: Double? = null,
+    val totalCarbsGrams: Double = 0.0
+)
 
 data class HomeUiState(
     val latestGlucose: GlucoseReadingEntity? = null,
@@ -32,7 +50,8 @@ data class HomeUiState(
     val currentCob: Double = 0.0,
     val settings: UserSettings = UserSettings(),
     val chartWindowHours: Int = 6,
-    val hasJugglucoData: Boolean = false
+    val hasJugglucoData: Boolean = false,
+    val statsByPeriod: Map<StatsPeriod, PeriodStats> = emptyMap()
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -48,8 +67,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val windowHours = 6
-    private val maxHistoryHours = 24
-    private val sinceMillis = System.currentTimeMillis() - maxHistoryHours * 3600_000L
+    private val maxChartHistoryHours = 24
+    private val statsHistoryDays = 7
+    private val sinceMillis = System.currentTimeMillis() - statsHistoryDays * 24 * 3600_000L
 
     val settingsFlow: StateFlow<UserSettings> = settingsRepo.settingsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
@@ -64,13 +84,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settingsRepo.settingsFlow,
         tickerFlow
     ) { latest, readings, entries, settings, now ->
-        val cutoff = now - maxHistoryHours * 3600_000L
-        val recentReadings = readings.filter { it.timestampMillis >= cutoff }
-        val recentEntries = entries.filter { it.timestampMillis >= cutoff }.sortedBy { it.timestampMillis }
-        val currentIob = IobCobCalculator.calculateLinearIob(entries, now, settings.diaHours)
+        val chartCutoff = now - maxChartHistoryHours * 3600_000L
+        val recentReadings = readings.filter { it.timestampMillis >= chartCutoff }
+        val recentEntries = entries.filter { it.timestampMillis >= chartCutoff }.sortedBy { it.timestampMillis }
+        val currentIob = IobCobCalculator.calculateExponentialIob(
+            entries = entries,
+            atTimeMillis = now,
+            diaHours = settings.diaHours,
+            peakMinutes = settings.insulinType.peakMinutes
+        )
         val currentCob = IobCobCalculator.calculateLinearCob(entries, now, settings.carbAbsorptionHours)
         val minsAgo = latest?.let { ((now - it.timestampMillis) / 60_000L).coerceAtLeast(0L) }
         val hasJuggluco = readings.any { it.source != "Demo" } || (latest != null && latest.source != "Demo")
+
+        val todayStart = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val statsMap = mapOf(
+            StatsPeriod.TODAY to computePeriodStats(
+                readings = readings,
+                entries = entries,
+                fromMillis = todayStart,
+                toMillis = now,
+                settings = settings,
+                daysForDailyAvg = null
+            ),
+            StatsPeriod.HOURS_24 to computePeriodStats(
+                readings = readings,
+                entries = entries,
+                fromMillis = now - 24 * 3600_000L,
+                toMillis = now,
+                settings = settings,
+                daysForDailyAvg = null
+            ),
+            StatsPeriod.DAYS_7 to computePeriodStats(
+                readings = readings,
+                entries = entries,
+                fromMillis = now - 7L * 24 * 3600_000L,
+                toMillis = now,
+                settings = settings,
+                daysForDailyAvg = 7.0
+            )
+        )
 
         HomeUiState(
             latestGlucose = latest,
@@ -81,9 +141,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             currentCob = currentCob,
             settings = settings,
             chartWindowHours = windowHours,
-            hasJugglucoData = hasJuggluco
+            hasJugglucoData = hasJuggluco,
+            statsByPeriod = statsMap
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
+
+    private fun computePeriodStats(
+        readings: List<GlucoseReadingEntity>,
+        entries: List<DiaryEntryEntity>,
+        fromMillis: Long,
+        toMillis: Long,
+        settings: UserSettings,
+        daysForDailyAvg: Double?
+    ): PeriodStats {
+        val periodReadings = readings.filter { it.timestampMillis in fromMillis..toMillis }
+        val periodEntries = entries.filter { it.timestampMillis in fromMillis..toMillis }
+
+        val count = periodReadings.size
+        val avgBg = if (count > 0) periodReadings.map { it.mgDl }.average() else null
+        val gmi = avgBg?.let { 3.31 + 0.02392 * it }
+        val belowCount = periodReadings.count { it.mgDl < settings.targetRangeMin }
+        val aboveCount = periodReadings.count { it.mgDl > settings.targetRangeMax }
+        val inRangeCount = count - belowCount - aboveCount
+
+        val totalBolus = periodEntries.sumOf { it.bolusUnits ?: 0.0 }
+        val totalCarbs = periodEntries.sumOf { it.carbsGrams ?: 0.0 }
+
+        return PeriodStats(
+            readingCount = count,
+            averageBg = avgBg,
+            gmiPercent = gmi,
+            timeInRangePercent = if (count > 0) inRangeCount * 100.0 / count else null,
+            timeBelowPercent = if (count > 0) belowCount * 100.0 / count else null,
+            timeAbovePercent = if (count > 0) aboveCount * 100.0 / count else null,
+            totalBolusUnits = totalBolus,
+            avgDailyBolusUnits = daysForDailyAvg?.let { totalBolus / it },
+            totalCarbsGrams = totalCarbs
+        )
+    }
 
     fun calculateBolus(bgMgDl: Int, carbsGrams: Double): BolusCalculationResult {
         val state = homeUiState.value

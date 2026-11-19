@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.easybolus.data.settings.InsulinType
 import de.easybolus.data.settings.ThemeMode
 import de.easybolus.data.settings.UserSettings
 import de.easybolus.ui.theme.BgInRangeGreen
@@ -84,6 +85,7 @@ fun SettingsScreen(
     var rangeMin by remember(settings) { mutableStateOf(settings.targetRangeMin.toString()) }
     var rangeMax by remember(settings) { mutableStateOf(settings.targetRangeMax.toString()) }
     var diaHours by remember(settings) { mutableStateOf(settings.diaHours.toString()) }
+    var insulinType by remember(settings) { mutableStateOf(settings.insulinType) }
     var penStep by remember(settings) { mutableStateOf(settings.penStepSize) }
     var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
 
@@ -131,6 +133,7 @@ fun SettingsScreen(
                                 targetRangeMin = rangeMin.toIntOrNull() ?: settings.targetRangeMin,
                                 targetRangeMax = rangeMax.toIntOrNull() ?: settings.targetRangeMax,
                                 diaHours = diaHours.replace(',', '.').toDoubleOrNull() ?: settings.diaHours,
+                                insulinType = insulinType,
                                 penStepSize = penStep,
                                 themeMode = themeMode
                             )
@@ -158,7 +161,30 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Bolus- & Insulin-Faktoren
+            // 1. Erscheinungsbild (ganz oben)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Erscheinungsbild", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ThemeMode.entries.forEach { mode ->
+                            FilterChip(
+                                selected = themeMode == mode,
+                                onClick = { themeMode = mode },
+                                label = { Text(mode.label) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 2. Bolus- & Insulin-Faktoren
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(14.dp),
@@ -197,6 +223,17 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Text("Insulin-Wirkprofil (IOB-Kurve)", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        InsulinType.entries.forEach { type ->
+                            FilterChip(
+                                selected = insulinType == type,
+                                onClick = { insulinType = type },
+                                label = { Text(type.shortLabel) }
+                            )
+                        }
+                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
@@ -282,7 +319,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. Zielbereich & Pen
+            // 3. Zielbereich & Pen
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(14.dp),
@@ -334,29 +371,6 @@ fun SettingsScreen(
                             onClick = { penStep = 1.0 },
                             label = { Text("1,0 IE (Standard)") }
                         )
-                    }
-                }
-            }
-
-            // 3. Erscheinungsbild
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("Erscheinungsbild", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ThemeMode.entries.forEach { mode ->
-                            FilterChip(
-                                selected = themeMode == mode,
-                                onClick = { themeMode = mode },
-                                label = { Text(mode.label) }
-                            )
-                        }
                     }
                 }
             }

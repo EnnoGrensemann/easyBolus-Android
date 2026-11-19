@@ -20,6 +20,11 @@ enum class ThemeMode(val label: String) {
     DARK("Dunkel")
 }
 
+enum class InsulinType(val label: String, val shortLabel: String, val peakMinutes: Double) {
+    RAPID("Schnell (NovoRapid / Humalog)", "Schnell (75 min)", 75.0),
+    ULTRA_RAPID("Ultra-Schnell (Fiasp / Lyumjev)", "Ultra-Schnell (55 min)", 55.0)
+}
+
 data class UserSettings(
     val carbRatio: Double = 10.0,           // g Kohlenhydrate pro 1 IE (Standard / Fallback)
     val useHourlyCarbRatio: Boolean = false,
@@ -29,6 +34,7 @@ data class UserSettings(
     val targetRangeMin: Int = 80,           // Grüner Zielbereich Min (mg/dl)
     val targetRangeMax: Int = 180,          // Grüner Zielbereich Max (mg/dl)
     val diaHours: Double = 4.0,             // Insulin-Wirkdauer in Stunden
+    val insulinType: InsulinType = InsulinType.RAPID,
     val penStepSize: Double = 0.5,          // 0.5 IE oder 1.0 IE
     val carbAbsorptionHours: Double = 3.0,  // Dauer für lineare COB-Anzeige (h)
     val themeMode: ThemeMode = ThemeMode.SYSTEM
@@ -50,6 +56,7 @@ class SettingsRepository(private val context: Context) {
         val TARGET_RANGE_MIN = intPreferencesKey("target_range_min")
         val TARGET_RANGE_MAX = intPreferencesKey("target_range_max")
         val DIA_HOURS = doublePreferencesKey("dia_hours")
+        val INSULIN_TYPE = stringPreferencesKey("insulin_type")
         val PEN_STEP_SIZE = doublePreferencesKey("pen_step_size")
         val CARB_ABSORPTION_HOURS = doublePreferencesKey("carb_absorption_hours")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -65,6 +72,9 @@ class SettingsRepository(private val context: Context) {
         val parsedThemeMode = prefs[Keys.THEME_MODE]
             ?.let { raw -> ThemeMode.entries.firstOrNull { it.name == raw } }
             ?: ThemeMode.SYSTEM
+        val parsedInsulinType = prefs[Keys.INSULIN_TYPE]
+            ?.let { raw -> InsulinType.entries.firstOrNull { it.name == raw } }
+            ?: InsulinType.RAPID
 
         UserSettings(
             carbRatio = baseCarbRatio,
@@ -75,6 +85,7 @@ class SettingsRepository(private val context: Context) {
             targetRangeMin = prefs[Keys.TARGET_RANGE_MIN] ?: 80,
             targetRangeMax = prefs[Keys.TARGET_RANGE_MAX] ?: 180,
             diaHours = prefs[Keys.DIA_HOURS] ?: 4.0,
+            insulinType = parsedInsulinType,
             penStepSize = prefs[Keys.PEN_STEP_SIZE] ?: 0.5,
             carbAbsorptionHours = prefs[Keys.CARB_ABSORPTION_HOURS] ?: 3.0,
             themeMode = parsedThemeMode
@@ -95,6 +106,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.TARGET_RANGE_MIN] = settings.targetRangeMin.coerceIn(50, 140)
             prefs[Keys.TARGET_RANGE_MAX] = settings.targetRangeMax.coerceIn(120, 300)
             prefs[Keys.DIA_HOURS] = settings.diaHours.coerceIn(2.0, 8.0)
+            prefs[Keys.INSULIN_TYPE] = settings.insulinType.name
             prefs[Keys.PEN_STEP_SIZE] = if (settings.penStepSize >= 1.0) 1.0 else 0.5
             prefs[Keys.CARB_ABSORPTION_HOURS] = settings.carbAbsorptionHours.coerceIn(1.0, 6.0)
             prefs[Keys.THEME_MODE] = settings.themeMode.name

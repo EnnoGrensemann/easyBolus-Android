@@ -60,13 +60,12 @@ import de.easybolus.ui.theme.IobCurveBlue
 import de.easybolus.ui.theme.TargetBandGreen
 import de.easybolus.ui.theme.TargetBandGreenDark
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
@@ -84,10 +83,11 @@ fun GlucoseDualAxisChart(
 
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
-    val verticalGridColor = if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
-    val horizontalGridColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
-    val axisBorderColor = if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1)
+    val verticalGridColor = if (isDark) Color(0xFF2C2C2C) else Color(0xFFE2E8F0)
+    val horizontalGridColor = if (isDark) Color(0xFF232323) else Color(0xFFF1F5F9)
+    val axisBorderColor = if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)
     val targetBandColor = if (isDark) TargetBandGreenDark else TargetBandGreen
+    val targetLineColor = if (isDark) BgInRangeGreen.copy(alpha = 0.65f) else BgInRangeGreen.copy(alpha = 0.72f)
 
     Box(modifier = modifier) {
         Canvas(
@@ -136,145 +136,178 @@ fun GlucoseDualAxisChart(
 
             val now = System.currentTimeMillis()
             val endTime = now - panBackMillis
-        val timeSpanMillis = (visibleHours * 3600_000f).toLong().coerceAtLeast(3600_000L)
-        val startTime = endTime - timeSpanMillis
-        val timeSpan = (endTime - startTime).toFloat().coerceAtLeast(1f)
+            val timeSpanMillis = (visibleHours * 3600_000f).toLong().coerceAtLeast(3600_000L)
+            val startTime = endTime - timeSpanMillis
+            val timeSpan = (endTime - startTime).toFloat().coerceAtLeast(1f)
 
-        val visibleReadings = readings.filter { it.timestampMillis in startTime..endTime }
+            val visibleReadings = readings.filter { it.timestampMillis in startTime..endTime }
 
-        // Dynamische linke Y-Achse (Blutzucker mg/dl) auf 50er-Schritte gerundet
-        val minReading = visibleReadings.minOfOrNull { it.mgDl } ?: settings.targetRangeMin
-        val maxReading = visibleReadings.maxOfOrNull { it.mgDl } ?: settings.targetRangeMax
-        val rawMin = min(minReading, settings.targetRangeMin).toFloat()
-        val rawMax = max(maxReading, settings.targetRangeMax).toFloat()
-        val bgMin = (floor((rawMin - 15f) / 50f) * 50f).coerceAtLeast(0f)
-        val bgMax = (ceil((rawMax + 15f) / 50f) * 50f).coerceAtLeast(bgMin + 100f)
-        val bgSpan = (bgMax - bgMin).coerceAtLeast(50f)
+            // Linke Y-Achse (Blutzucker mg/dl): mindestens 0–300, bei höheren Werten dynamisch in 50er-Schritten
+            val maxReading = visibleReadings.maxOfOrNull { it.mgDl } ?: settings.targetRangeMax
+            val rawMax = max(maxReading, settings.targetRangeMax).toFloat()
+            val bgMin = 0f
+            val bgMax = max(300f, ceil((rawMax + 15f) / 50f) * 50f)
+            val bgSpan = (bgMax - bgMin).coerceAtLeast(50f)
 
-        // IOB & COB vorab samplen für dynamische rechte Y-Achse
-        val sampleCount = 72
-        val iobSamples = FloatArray(sampleCount + 1)
-        val cobScaledSamples = FloatArray(sampleCount + 1)
-        var maxRightVal = 0f
-        for (i in 0..sampleCount) {
-            val t = startTime + (i.toFloat() / sampleCount * timeSpan).toLong()
-            val iob = IobCobCalculator.calculateLinearIob(entries, t, settings.diaHours).toFloat()
-            val cob = IobCobCalculator.calculateLinearCob(entries, t, settings.carbAbsorptionHours).toFloat()
-            val cobScaled = cob / 40f
-            iobSamples[i] = iob
-            cobScaledSamples[i] = cobScaled
-            maxRightVal = max(maxRightVal, max(iob, cobScaled))
-        }
+            // Exponentielle IOB-Kurve & COB vorab samplen für rechte Y-Achse (mindestens 0–10 IE)
+            val sampleCount = 96
+            val iobSamples = FloatArray(sampleCount + 1)
+            val cobScaledSamples = FloatArray(sampleCount + 1)
+            var maxRightVal = 0f
+            for (i in 0..sampleCount) {
+                val t = startTime + (i.toFloat() / sampleCount * timeSpan).toLong()
+                val iob = IobCobCalculator.calculateExponentialIob(
+                    entries = entries,
+                    atTimeMillis = t,
+                    diaHours = settings.diaHours,
+                    peakMinutes = settings.insulinType.peakMinutes
+                ).toFloat()
+                val cob = IobCobCalculator.calculateLinearCob(entries, t, settings.carbAbsorptionHours).toFloat()
+                val cobScaled = cob / 40f
+                iobSamples[i] = iob
+                cobScaledSamples[i] = cobScaled
+                maxRightVal = max(maxRightVal, max(iob, cobScaled))
+            }
 
-        val insMin = 0f
-        val insMax = max(2f, ceil(maxRightVal * 1.15f))
+            val insMin = 0f
+            val insMax = max(10f, ceil(maxRightVal * 1.15f))
 
-        fun xForTime(t: Long): Float =
-            leftPad + ((t - startTime).toFloat() / timeSpan) * chartW
+            fun xForTime(t: Long): Float =
+                leftPad + ((t - startTime).toFloat() / timeSpan) * chartW
 
-        fun yForBg(bg: Float): Float =
-            topPad + chartH - ((bg - bgMin) / bgSpan).coerceIn(0f, 1f) * chartH
+            fun yForBg(bg: Float): Float =
+                topPad + chartH - ((bg - bgMin) / bgSpan).coerceIn(0f, 1f) * chartH
 
-        fun yForIns(ie: Float): Float =
-            topPad + chartH - ((ie - insMin) / (insMax - insMin)).coerceIn(0f, 1f) * chartH
+            fun yForIns(ie: Float): Float =
+                topPad + chartH - ((ie - insMin) / (insMax - insMin)).coerceIn(0f, 1f) * chartH
 
-        // 1. Grünes Zielbereich-Band
-        val bandTop = yForBg(settings.targetRangeMax.toFloat())
-        val bandBottom = yForBg(settings.targetRangeMin.toFloat())
-        drawRect(
-            color = targetBandColor,
-            topLeft = Offset(leftPad, bandTop),
-            size = Size(chartW, (bandBottom - bandTop).coerceAtLeast(0f))
-        )
-
-        // 2. Vertikale Zeit-Gitterlinien & X-Achsen-Labels (dynamische Schrittweite beim Zoomen)
-        val textPaint = Paint().apply {
-            color = labelColor.toArgb()
-            textSize = 11.dp.toPx()
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-        val tickSteps = 6
-        for (i in 0..tickSteps) {
-            val t = startTime + (i.toFloat() / tickSteps * timeSpan).toLong()
-            val x = xForTime(t)
+            // 1. Grünes Zielbereich-Band + dezente gestrichelte Zielwert-Linie
+            val bandTop = yForBg(settings.targetRangeMax.toFloat())
+            val bandBottom = yForBg(settings.targetRangeMin.toFloat())
+            drawRect(
+                color = targetBandColor,
+                topLeft = Offset(leftPad, bandTop),
+                size = Size(chartW, (bandBottom - bandTop).coerceAtLeast(0f))
+            )
+            val targetY = yForBg(settings.targetBg.toFloat())
             drawLine(
-                color = verticalGridColor,
-                start = Offset(x, topPad),
-                end = Offset(x, topPad + chartH),
-                strokeWidth = 1.dp.toPx()
+                color = targetLineColor,
+                start = Offset(leftPad, targetY),
+                end = Offset(leftPad + chartW, targetY),
+                strokeWidth = 1.2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
             )
-            drawContext.canvas.nativeCanvas.drawText(
-                timeFormat.format(Date(t)),
-                x,
-                topPad + chartH + 18.dp.toPx(),
-                textPaint
-            )
-        }
 
-        // 3. Linke Y-Achse (Blutzucker mg/dl)
-        val leftLabelPaint = Paint().apply {
-            color = labelColor.toArgb()
-            textSize = 10.dp.toPx()
-            isAntiAlias = true
-            textAlign = Paint.Align.RIGHT
-        }
-        val bgStartTick = bgMin.roundToInt()
-        val bgEndTick = bgMax.roundToInt()
-        for (bgTick in bgStartTick..bgEndTick step 50) {
-            val y = yForBg(bgTick.toFloat())
-            drawLine(
-                color = horizontalGridColor,
-                start = Offset(leftPad, y),
-                end = Offset(leftPad + chartW, y),
-                strokeWidth = 1.dp.toPx()
-            )
-            drawContext.canvas.nativeCanvas.drawText(
-                bgTick.toString(),
-                leftPad - 6.dp.toPx(),
-                y + 4.dp.toPx(),
-                leftLabelPaint
-            )
-        }
+            // 2. Vertikale Zeit-Gitterlinien & X-Achsen-Labels auf vollen oder halben Stunden
+            val textPaint = Paint().apply {
+                color = labelColor.toArgb()
+                textSize = 11.dp.toPx()
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+            }
+            val stepMinutes = when {
+                visibleHours <= 2.5f -> 30
+                visibleHours <= 7.5f -> 60
+                visibleHours <= 14f -> 120
+                else -> 180
+            }
+            val tickCal = Calendar.getInstance().apply {
+                timeInMillis = startTime
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                val minutesOfDay = get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE)
+                val rem = minutesOfDay % stepMinutes
+                if (rem != 0) {
+                    add(Calendar.MINUTE, stepMinutes - rem)
+                }
+                if (timeInMillis < startTime) {
+                    add(Calendar.MINUTE, stepMinutes)
+                }
+            }
+            val minEdgeGapPx = 14.dp.toPx()
+            while (tickCal.timeInMillis <= endTime) {
+                val t = tickCal.timeInMillis
+                val x = xForTime(t)
+                drawLine(
+                    color = verticalGridColor,
+                    start = Offset(x, topPad),
+                    end = Offset(x, topPad + chartH),
+                    strokeWidth = 1.dp.toPx()
+                )
+                if (x >= leftPad + minEdgeGapPx && x <= leftPad + chartW - minEdgeGapPx) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        timeFormat.format(Date(t)),
+                        x,
+                        topPad + chartH + 18.dp.toPx(),
+                        textPaint
+                    )
+                }
+                tickCal.add(Calendar.MINUTE, stepMinutes)
+            }
 
-        // Linker Achsentitel (vertikal)
-        drawContext.canvas.nativeCanvas.save()
-        drawContext.canvas.nativeCanvas.rotate(-90f, 12.dp.toPx(), topPad + chartH / 2f)
-        val axisTitlePaint = Paint().apply {
-            color = labelColor.toArgb()
-            textSize = 11.dp.toPx()
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-        drawContext.canvas.nativeCanvas.drawText(
-            "Blutzucker (mg/dl)",
-            12.dp.toPx(),
-            topPad + chartH / 2f,
-            axisTitlePaint
-        )
-        drawContext.canvas.nativeCanvas.restore()
+            // 3. Linke Y-Achse (Blutzucker mg/dl)
+            val leftLabelPaint = Paint().apply {
+                color = labelColor.toArgb()
+                textSize = 10.dp.toPx()
+                isAntiAlias = true
+                textAlign = Paint.Align.RIGHT
+            }
+            val bgStartTick = bgMin.roundToInt()
+            val bgEndTick = bgMax.roundToInt()
+            for (bgTick in bgStartTick..bgEndTick step 50) {
+                val y = yForBg(bgTick.toFloat())
+                drawLine(
+                    color = horizontalGridColor,
+                    start = Offset(leftPad, y),
+                    end = Offset(leftPad + chartW, y),
+                    strokeWidth = 1.dp.toPx()
+                )
+                drawContext.canvas.nativeCanvas.drawText(
+                    bgTick.toString(),
+                    leftPad - 6.dp.toPx(),
+                    y + 4.dp.toPx(),
+                    leftLabelPaint
+                )
+            }
 
-        // 4. Rechte Y-Achse (Insulin IE)
-        val rightLabelPaint = Paint().apply {
-            color = IobCurveBlue.toArgb()
-            textSize = 10.dp.toPx()
-            isAntiAlias = true
-            textAlign = Paint.Align.LEFT
-        }
-        val insMaxInt = insMax.roundToInt().coerceAtLeast(2)
-        val insStep = when {
-            insMaxInt > 10 -> 2
-            else -> 1
-        }
-        for (ieTick in 0..insMaxInt step insStep) {
-            val y = yForIns(ieTick.toFloat())
+            // Linker Achsentitel (vertikal)
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(-90f, 12.dp.toPx(), topPad + chartH / 2f)
+            val axisTitlePaint = Paint().apply {
+                color = labelColor.toArgb()
+                textSize = 11.dp.toPx()
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+            }
             drawContext.canvas.nativeCanvas.drawText(
-                ieTick.toString(),
-                leftPad + chartW + 6.dp.toPx(),
-                y + 4.dp.toPx(),
-                rightLabelPaint
+                "Blutzucker (mg/dl)",
+                12.dp.toPx(),
+                topPad + chartH / 2f,
+                axisTitlePaint
             )
-        }
+            drawContext.canvas.nativeCanvas.restore()
+
+            // 4. Rechte Y-Achse (Insulin IE)
+            val rightLabelPaint = Paint().apply {
+                color = IobCurveBlue.toArgb()
+                textSize = 10.dp.toPx()
+                isAntiAlias = true
+                textAlign = Paint.Align.LEFT
+            }
+            val insMaxInt = insMax.roundToInt().coerceAtLeast(10)
+            val insStep = when {
+                insMaxInt > 20 -> 5
+                else -> 2
+            }
+            for (ieTick in 0..insMaxInt step insStep) {
+                val y = yForIns(ieTick.toFloat())
+                drawContext.canvas.nativeCanvas.drawText(
+                    ieTick.toString(),
+                    leftPad + chartW + 6.dp.toPx(),
+                    y + 4.dp.toPx(),
+                    rightLabelPaint
+                )
+            }
         drawContext.canvas.nativeCanvas.save()
         drawContext.canvas.nativeCanvas.rotate(-90f, size.width - 10.dp.toPx(), topPad + chartH / 2f)
         val rightTitlePaint = Paint().apply {
@@ -356,7 +389,7 @@ fun GlucoseDualAxisChart(
                 }
                 drawCircle(
                     color = dotColor,
-                    radius = 3.dp.toPx(),
+                    radius = 1.8.dp.toPx(),
                     center = Offset(x, y)
                 )
             }
@@ -493,7 +526,12 @@ fun GlucoseDualAxisChart(
             val nearest = readings.minByOrNull { abs(it.timestampMillis - selMs) }
                 ?.takeIf { abs(it.timestampMillis - selMs) <= 20 * 60_000L }
             val displayMs = nearest?.timestampMillis ?: selMs
-            val iobAtTime = IobCobCalculator.calculateLinearIob(entries, displayMs, settings.diaHours)
+            val iobAtTime = IobCobCalculator.calculateExponentialIob(
+                entries = entries,
+                atTimeMillis = displayMs,
+                diaHours = settings.diaHours,
+                peakMinutes = settings.insulinType.peakMinutes
+            )
             val bgPart = nearest?.let { "${it.mgDl} mg/dl · " } ?: ""
             val label = "${timeFormat.format(Date(displayMs))} · ${bgPart}IOB ${String.format(Locale.GERMANY, "%.1f IE", iobAtTime)}"
 
