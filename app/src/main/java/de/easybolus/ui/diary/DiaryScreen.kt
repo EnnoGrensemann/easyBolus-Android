@@ -216,7 +216,7 @@ fun DiaryScreen(
                             )
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(24.dp)) }
+                    item { Spacer(modifier = Modifier.height(84.dp)) }
                 }
             }
         }

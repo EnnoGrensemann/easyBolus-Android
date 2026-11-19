@@ -5,22 +5,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +40,8 @@ import de.easybolus.ui.diary.DiaryScreen
 import de.easybolus.ui.home.HomeScreen
 import de.easybolus.ui.settings.SettingsScreen
 import de.easybolus.ui.theme.EasyBolusTheme
-import de.easybolus.ui.theme.FabTeal
+import de.easybolus.ui.theme.HeaderGradientTop
+import de.easybolus.ui.theme.HeaderGradientTopDark
 
 private enum class AppScreen {
     HOME, DIARY, SETTINGS
@@ -85,8 +83,29 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
             return@EasyBolusTheme
         }
 
+        val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showBolusSheet = true },
+                    shape = CircleShape,
+                    containerColor = if (isDark) HeaderGradientTopDark else HeaderGradientTop,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 10.dp
+                    ),
+                    modifier = Modifier.size(62.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Bolus berechnen oder Eintrag hinzufügen",
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+            },
             bottomBar = {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     NavigationBarItem(
@@ -95,32 +114,6 @@ private fun EasyBolusRoot(viewModel: MainViewModel = viewModel()) {
                         icon = { Icon(Icons.Default.Home, contentDescription = "Startseite") },
                         label = { Text("Startseite") }
                     )
-                    Box(
-                        modifier = Modifier
-                            .weight(0.85f)
-                            .height(64.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Surface(
-                            onClick = { showBolusSheet = true },
-                            color = FabTeal,
-                            contentColor = Color.White,
-                            shape = RoundedCornerShape(16.dp),
-                            shadowElevation = 3.dp,
-                            modifier = Modifier.size(width = 58.dp, height = 46.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Bolus berechnen oder Eintrag hinzufügen",
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-                    }
                     NavigationBarItem(
                         selected = currentScreen == AppScreen.DIARY,
                         onClick = { currentScreen = AppScreen.DIARY },
