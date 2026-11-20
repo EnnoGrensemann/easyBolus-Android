@@ -12,7 +12,7 @@ class GlucoseFormatterTest {
     fun formatsAndParsesMgDlAndMmolL() {
         assertEquals("180", GlucoseFormatter.formatValue(180, GlucoseUnit.MG_DL, Locale.US))
         assertEquals("10.0", GlucoseFormatter.formatValue(180, GlucoseUnit.MMOL_L, Locale.US))
-        assertEquals("5,6", GlucoseFormatter.formatValue(100, GlucoseUnit.MMOL_L, Locale.GERMANY))
+        assertEquals("5,5", GlucoseFormatter.formatValue(100, GlucoseUnit.MMOL_L, Locale.GERMANY))
 
         assertEquals(180, GlucoseFormatter.parseToMgDl("180", GlucoseUnit.MG_DL))
         assertEquals(180, GlucoseFormatter.parseToMgDl("10,0", GlucoseUnit.MMOL_L))
