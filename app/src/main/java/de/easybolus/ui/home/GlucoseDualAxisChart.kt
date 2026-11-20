@@ -412,20 +412,20 @@ fun GlucoseDualAxisChart(
                 drawPath(
                     path = iobFillPath,
                     brush = Brush.verticalGradient(
-                        colors = listOf(IobAreaBlue, Color.Transparent),
+                        colors = listOf(IobAreaBlue.copy(alpha = 0.18f), Color.Transparent),
                         startY = topPad + chartH * 0.35f,
                         endY = baseY
                     )
                 )
                 drawPath(
                     path = iobPath,
-                    color = IobCurveBlue,
-                    style = Stroke(width = 1.8.dp.toPx())
+                    color = IobCurveBlue.copy(alpha = 0.50f),
+                    style = Stroke(width = 1.5.dp.toPx())
                 )
                 drawPath(
                     path = cobPath,
-                    color = CobCurveOlive,
-                    style = Stroke(width = 1.8.dp.toPx())
+                    color = CobCurveOlive.copy(alpha = 0.50f),
+                    style = Stroke(width = 1.5.dp.toPx())
                 )
 
                 // 6. Feine Glukose-Punkte (Rot-Grün-freundliche Farben je nach Zielbereich)

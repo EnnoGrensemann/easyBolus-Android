@@ -100,12 +100,16 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
+                    val isStaleCgm = uiState.settings.jugglucoEnabled && (uiState.minutesAgo ?: 0L) > 15L
                     val latestBg = uiState.latestGlucose?.mgDl
-                    val bgText = latestBg?.let { GlucoseFormatter.formatValue(it, unit, locale) } ?: "--"
+                    val bgText = when {
+                        latestBg == null || isStaleCgm -> "---"
+                        else -> GlucoseFormatter.formatValue(latestBg, unit, locale)
+                    }
                     val trend = uiState.latestGlucose?.trendArrow
-                    val arrowText = if (trend == null || trend == TrendArrow.UNKNOWN) "" else trend.symbol
+                    val arrowText = if (isStaleCgm || trend == null || trend == TrendArrow.UNKNOWN) "" else trend.symbol
                     val statusDotColor = when {
-                        latestBg == null -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        latestBg == null || isStaleCgm -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         latestBg < uiState.settings.targetRangeMin -> BgLowRed
                         latestBg > uiState.settings.targetRangeMax -> BgHighOrange
                         else -> BgInRangeGreen
@@ -121,7 +125,11 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = bgText,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (isStaleCgm) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
                             style = TextStyle(
                                 fontSize = 52.sp,
                                 fontWeight = FontWeight.Normal,
@@ -147,7 +155,6 @@ fun HomeScreen(
                         }
                     }
 
-                    val isStale = uiState.settings.jugglucoEnabled && (uiState.minutesAgo ?: 0L) >= 15L
                     val timeLabel = when (val mins = uiState.minutesAgo) {
                         null -> if (uiState.settings.jugglucoEnabled) {
                             stringResource(R.string.waiting_for_juggluco)
@@ -158,19 +165,29 @@ fun HomeScreen(
                         in 1L..119L -> stringResource(R.string.minutes_ago, mins)
                         else -> stringResource(R.string.hours_ago, mins / 60L)
                     }
+                    val deltaText = if (!isStaleCgm && uiState.latestDeltaMgDl != null) {
+                        "${GlucoseFormatter.formatSignedDelta(uiState.latestDeltaMgDl, unit, locale)} $unitText"
+                    } else {
+                        null
+                    }
+                    val subtitleText = if (deltaText != null) "$deltaText · $timeLabel" else timeLabel
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = timeLabel,
-                            color = if (isStale) {
+                            text = subtitleText,
+                            color = if (isStaleCgm) {
                                 if (isDark) Color(0xFFFDE68A) else Color(0xFFD97706)
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            fontSize = 12.sp,
-                            fontWeight = if (isStale) FontWeight.Medium else FontWeight.Normal
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                fontWeight = if (isStaleCgm) FontWeight.Medium else FontWeight.Normal,
+                                fontFeatureSettings = "tnum"
+                            )
                         )
                         if (!uiState.settings.jugglucoEnabled) {
                             Surface(

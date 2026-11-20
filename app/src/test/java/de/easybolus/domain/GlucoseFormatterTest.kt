@@ -19,5 +19,9 @@ class GlucoseFormatterTest {
         assertEquals(101, GlucoseFormatter.parseToMgDl("5.6", GlucoseUnit.MMOL_L))
         assertNull(GlucoseFormatter.parseToMgDl("", GlucoseUnit.MMOL_L))
         assertNull(GlucoseFormatter.parseToMgDl("-2", GlucoseUnit.MG_DL))
+
+        assertEquals("+4", GlucoseFormatter.formatSignedDelta(4, GlucoseUnit.MG_DL, Locale.GERMANY))
+        assertEquals("-3", GlucoseFormatter.formatSignedDelta(-3, GlucoseUnit.MG_DL, Locale.GERMANY))
+        assertEquals("+0,2", GlucoseFormatter.formatSignedDelta(4, GlucoseUnit.MMOL_L, Locale.GERMANY))
     }
 }

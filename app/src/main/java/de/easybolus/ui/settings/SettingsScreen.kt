@@ -241,6 +241,24 @@ fun SettingsScreen(
                         }
                     }
 
+                    Text(
+                        text = stringResource(R.string.settings_pen_step),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = penStep == 0.5,
+                            onClick = { penStep = 0.5 },
+                            label = { Text(stringResource(R.string.settings_pen_half)) }
+                        )
+                        FilterChip(
+                            selected = penStep == 1.0,
+                            onClick = { penStep = 1.0 },
+                            label = { Text(stringResource(R.string.settings_pen_full)) }
+                        )
+                    }
+
                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
                     Row(
@@ -332,7 +350,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 3. Zielbereich & Pen
+            // 3. Zielwerte
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(18.dp),
@@ -373,24 +391,6 @@ fun SettingsScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_pen_step),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = penStep == 0.5,
-                            onClick = { penStep = 0.5 },
-                            label = { Text(stringResource(R.string.settings_pen_half)) }
-                        )
-                        FilterChip(
-                            selected = penStep == 1.0,
-                            onClick = { penStep = 1.0 },
-                            label = { Text(stringResource(R.string.settings_pen_full)) }
                         )
                     }
                 }

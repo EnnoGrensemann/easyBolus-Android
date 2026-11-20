@@ -66,6 +66,18 @@ object GlucoseFormatter {
         }
     }
 
+    fun formatSignedDelta(
+        deltaMgDl: Int,
+        unit: GlucoseUnit,
+        locale: Locale = Locale.getDefault()
+    ): String = when (unit) {
+        GlucoseUnit.MG_DL -> if (deltaMgDl >= 0) "+$deltaMgDl" else deltaMgDl.toString()
+        GlucoseUnit.MMOL_L -> {
+            val d = mgDlToMmol(deltaMgDl.toDouble())
+            if (d >= 0.0) String.format(locale, "+%.1f", d) else String.format(locale, "%.1f", d)
+        }
+    }
+
     fun unitLabel(unit: GlucoseUnit): String = when (unit) {
         GlucoseUnit.MG_DL -> "mg/dl"
         GlucoseUnit.MMOL_L -> "mmol/L"

@@ -9,9 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -121,13 +121,13 @@ private fun EasyBolusRoot(
                     NavigationBarItem(
                         selected = currentScreen == AppScreen.HOME,
                         onClick = { currentScreen = AppScreen.HOME },
-                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.nav_home)) },
+                        icon = { Icon(Icons.Default.Dashboard, contentDescription = stringResource(R.string.nav_home)) },
                         label = { Text(stringResource(R.string.nav_home)) }
                     )
                     NavigationBarItem(
                         selected = currentScreen == AppScreen.DIARY,
                         onClick = { currentScreen = AppScreen.DIARY },
-                        icon = { Icon(Icons.Default.History, contentDescription = stringResource(R.string.nav_diary)) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = stringResource(R.string.nav_diary)) },
                         label = { Text(stringResource(R.string.nav_diary)) }
                     )
                     NavigationBarItem(

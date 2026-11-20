@@ -44,6 +44,7 @@ data class PeriodStats(
 
 data class HomeUiState(
     val latestGlucose: GlucoseReadingEntity? = null,
+    val latestDeltaMgDl: Int? = null,
     val minutesAgo: Long? = null,
     val chartReadings: List<GlucoseReadingEntity> = emptyList(),
     val chartEntries: List<DiaryEntryEntity> = emptyList(),
@@ -96,6 +97,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
         val currentCob = IobCobCalculator.calculateLinearCob(entries, now, settings.carbAbsorptionHours)
         val minsAgo = latest?.let { ((now - it.timestampMillis) / 60_000L).coerceAtLeast(0L) }
+        val latestDelta = latest?.let { cur ->
+            val prev = readings.lastOrNull { it.timestampMillis < cur.timestampMillis }
+            if (prev != null && (cur.timestampMillis - prev.timestampMillis) <= 30 * 60_000L) {
+                cur.mgDl - prev.mgDl
+            } else {
+                null
+            }
+        }
         val hasJuggluco = readings.any { it.source != "Demo" && it.source != "Manual" } ||
             (latest != null && latest.source != "Demo" && latest.source != "Manual")
 
@@ -144,6 +153,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         HomeUiState(
             latestGlucose = latest,
+            latestDeltaMgDl = latestDelta,
             minutesAgo = minsAgo,
             chartReadings = recentReadings,
             chartEntries = recentEntries,

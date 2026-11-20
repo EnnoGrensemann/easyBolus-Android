@@ -3,7 +3,7 @@
     <string name="app_name">easyBOLUS</string>
 
     <!-- Navigation -->
-    <string name="nav_home">Startseite</string>
+    <string name="nav_home">Dashboard</string>
     <string name="nav_diary">Tagebuch</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="fab_entry">Eintrag</string>
@@ -54,7 +54,7 @@
 
     <!-- Diary -->
     <string name="diary_export_cd">CSV Export</string>
-    <string name="diary_empty">Noch keine Tagebucheinträge vorhanden.\nTippe auf der Startseite auf „+ Eintrag“, um einen Bolus oder Mahlzeiten zu erfassen.</string>
+    <string name="diary_empty">Noch keine Tagebucheinträge vorhanden.\nTippe im Dashboard auf „+ Eintrag“, um einen Bolus oder Mahlzeiten zu erfassen.</string>
     <string name="filter_all">Alle</string>
     <string name="type_bolus">Bolus</string>
     <string name="type_carbs">KH</string>
@@ -108,7 +108,7 @@
     <string name="theme_light">Hell</string>
     <string name="theme_dark">Dunkel</string>
     <string name="settings_bg_unit">Blutzucker-Einheit</string>
-    <string name="settings_factors_title">Bolus- &amp; Insulin-Faktoren</string>
+    <string name="settings_factors_title">Insulin &amp; Pen</string>
     <string name="settings_carb_ratio">KH-Faktor (g / 1 %1$s)</string>
     <string name="settings_isf">Korrekturfaktor (%1$s)</string>
     <string name="settings_dia">Insulin-Wirkdauer DIA (Std.)</string>
@@ -120,7 +120,7 @@
     <string name="settings_hourly_expand">24-Stunden-Werte bearbeiten</string>
     <string name="settings_hourly_collapse">24-Stunden-Werte einklappen</string>
     <string name="settings_hourly_copy_base">Basis-KH-Faktor (%1$s) für alle Stunden übernehmen</string>
-    <string name="settings_target_pen_title">Zielbereich &amp; Pen</string>
+    <string name="settings_target_pen_title">Zielwerte</string>
     <string name="settings_target_bg">Zielwert (%1$s)</string>
     <string name="settings_range_min">Zielbereich Min (%1$s)</string>
     <string name="settings_range_max">Zielbereich Max (%1$s)</string>
