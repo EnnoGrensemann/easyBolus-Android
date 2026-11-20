@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import de.easybolus.data.local.EasyBolusDatabase
+import de.easybolus.data.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,7 +29,9 @@ class JugglucoBroadcastReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         scope.launch {
             try {
-                EasyBolusDatabase.getInstance(context).dao().insertGlucoseReading(reading)
+                if (SettingsRepository(context).isJugglucoEnabled()) {
+                    EasyBolusDatabase.getInstance(context).dao().insertGlucoseReading(reading)
+                }
             } finally {
                 pendingResult.finish()
             }

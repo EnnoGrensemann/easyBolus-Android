@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">easyBOLUS</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Startseite</string>
+    <string name="nav_diary">Tagebuch</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="fab_entry">Eintrag</string>
+    <string name="fab_entry_cd">Bolus berechnen oder Eintrag hinzufügen</string>
+
+    <!-- Units -->
+    <string name="unit_mg_dl">mg/dl</string>
+    <string name="unit_mmol_l">mmol/L</string>
+    <string name="unit_ie">IE</string>
+    <string name="unit_carbs_short">KH</string>
+
+    <!-- Home -->
+    <string name="waiting_for_juggluco">Warte auf Juggluco-Broadcast…</string>
+    <string name="no_manual_reading">Noch kein Messwert</string>
+    <string name="just_now">gerade eben</string>
+    <string name="minutes_ago">vor %1$d min</string>
+    <string name="hours_ago">vor %1$d Std.</string>
+    <string name="manual_bg_short">+ BZ</string>
+    <string name="manual_bg_dialog_title">Blutzucker eintragen</string>
+    <string name="manual_bg_input_label">Blutzucker (%1$s)</string>
+    <string name="chart_empty_juggluco">Noch keine Verlaufsdaten vorhanden.\nAktiviere in Juggluco den Broadcast (glucodata.Minute / xDrip) oder lade Demo-Daten in den Einstellungen.</string>
+    <string name="chart_empty_manual">Noch keine Verlaufsdaten vorhanden.\nTippe auf „+ BZ“ oder „+ Eintrag“, um deinen ersten Blutzuckerwert einzutragen.</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistik</string>
+    <string name="period_today">Heute</string>
+    <string name="period_24h">24h</string>
+    <string name="period_7d">7T</string>
+    <string name="period_90d">90T</string>
+    <string name="stat_low">Low %1$d%%</string>
+    <string name="stat_low_empty">Low --</string>
+    <string name="stat_tir">TIR %1$d%%</string>
+    <string name="stat_tir_empty">TIR --</string>
+    <string name="stat_high">High %1$d%%</string>
+    <string name="stat_high_empty">High --</string>
+    <string name="stat_avg_bg">Ø BZ</string>
+    <string name="stat_gmi">GMI</string>
+    <string name="stat_ehba1c">eHbA1c</string>
+    <string name="stat_bolus">Bolus</string>
+    <string name="stat_carbs">KH</string>
+    <string name="stat_per_day">Ø %1$s/T</string>
+
+    <!-- Chart -->
+    <string name="chart_axis_bg">Blutzucker (%1$s)</string>
+    <string name="chart_axis_insulin">Insulin (%1$s)</string>
+    <string name="chart_target_label">Ziel %1$s</string>
+    <string name="chart_reset_now">Jetzt (%1$dh)</string>
+
+    <!-- Diary -->
+    <string name="diary_export_cd">CSV Export</string>
+    <string name="diary_empty">Noch keine Tagebucheinträge vorhanden.\nTippe auf der Startseite auf „+ Eintrag“, um einen Bolus oder Mahlzeiten zu erfassen.</string>
+    <string name="filter_all">Alle</string>
+    <string name="type_bolus">Bolus</string>
+    <string name="type_carbs">KH</string>
+    <string name="type_basal">Basal</string>
+    <string name="type_note">Notiz</string>
+    <string name="day_today">Heute</string>
+    <string name="day_yesterday">Gestern</string>
+    <string name="diary_bolus_fmt">Bolus: %1$s %2$s</string>
+    <string name="diary_carbs_fmt">KH: %1$s g</string>
+    <string name="diary_basal_fmt">Basal: %1$s %2$s</string>
+    <string name="diary_edit_title">Eintrag bearbeiten</string>
+    <string name="diary_edit_group_title">Einträge bearbeiten (%1$s)</string>
+    <string name="diary_value_label">Wert</string>
+    <string name="diary_note_label">Notiz</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_save">Speichern</string>
+
+    <!-- Bolus & Quick Entry Sheet -->
+    <string name="tab_bolus_calc">Bolus-Rechner</string>
+    <string name="tab_quick_entry">Schnell-Eintrag</string>
+    <string name="label_bg_unit">Blutzucker (%1$s)</string>
+    <string name="label_carbs_g">Kohlenhydrate (g)</string>
+    <string name="label_hourly_active">Aktiver Stundenfaktor (%1$02d:00 Uhr): %2$s g/%3$s</string>
+    <string name="label_meal_bolus">Mahlzeiten-Bolus (%1$d g / %2$s)</string>
+    <string name="label_correction">Korrektur (%1$s → %2$s %3$s)</string>
+    <string name="label_active_iob">Aktives Insulin (IOB)</string>
+    <string name="label_pen_recommendation">Pen-Empfehlung</string>
+    <string name="label_rounded_step">Gerundet auf %1$s %2$s</string>
+    <string name="label_injected_bolus">Gespritzter Bolus (%1$s)</string>
+    <string name="label_note_optional_hint">Notiz (optional, z. B. Pizza, Sport)</string>
+    <string name="btn_save_and_log">Speichern &amp; Dokumentieren</string>
+    <string name="mode_carbs_and_bolus">KH + IE</string>
+    <string name="mode_bg">BZ</string>
+    <string name="label_time_pick">Uhrzeit: %1$02d:%2$02d</string>
+    <string name="label_time_pick_cd">Uhrzeit wählen</string>
+    <string name="label_bolus_unit">Bolus (%1$s)</string>
+    <string name="label_basal_unit">Basalinsulin (%1$s)</string>
+    <string name="label_note_event">Notiz / Sport / Ereignis</string>
+    <string name="label_note_optional">Notiz (optional)</string>
+    <string name="btn_save_entry">Eintrag speichern</string>
+
+    <!-- Bolus Reminder Dialog -->
+    <string name="reminder_inject_now">Jetzt spritzen</string>
+    <string name="reminder_for_carbs">zu %1$d g KH</string>
+    <string name="reminder_auto_close">Verschwindet automatisch · Tippe daneben zum Schließen</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Darstellung &amp; Einheiten</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="settings_bg_unit">Blutzucker-Einheit</string>
+    <string name="settings_factors_title">Bolus- &amp; Insulin-Faktoren</string>
+    <string name="settings_carb_ratio">KH-Faktor (g / 1 %1$s)</string>
+    <string name="settings_isf">Korrekturfaktor (%1$s)</string>
+    <string name="settings_dia">Insulin-Wirkdauer DIA (Std.)</string>
+    <string name="settings_insulin_profile">Insulin-Wirkprofil (IOB-Kurve)</string>
+    <string name="insulin_rapid_short">Schnell (75 min)</string>
+    <string name="insulin_ultra_rapid_short">Ultra-Schnell (55 min)</string>
+    <string name="settings_hourly_carb_ratio">Stündlicher KH-Faktor</string>
+    <string name="settings_hourly_carb_ratio_sub">Eigener KH-Faktor für jede Stunde (00–23 Uhr)</string>
+    <string name="settings_hourly_expand">24-Stunden-Werte bearbeiten</string>
+    <string name="settings_hourly_collapse">24-Stunden-Werte einklappen</string>
+    <string name="settings_hourly_copy_base">Basis-KH-Faktor (%1$s) für alle Stunden übernehmen</string>
+    <string name="settings_target_pen_title">Zielbereich &amp; Pen</string>
+    <string name="settings_target_bg">Zielwert (%1$s)</string>
+    <string name="settings_range_min">Zielbereich Min (%1$s)</string>
+    <string name="settings_range_max">Zielbereich Max (%1$s)</string>
+    <string name="settings_pen_step">Pen-Schrittweite</string>
+    <string name="settings_pen_half">0,5 IE (Halb-Einheiten)</string>
+    <string name="settings_pen_full">1,0 IE (Standard)</string>
+    <string name="settings_sensor_title">Sensor-Anbindung &amp; Testdaten</string>
+    <string name="settings_juggluco_toggle">Juggluco / xDrip Broadcast empfangen</string>
+    <string name="settings_juggluco_toggle_sub">Deaktivieren, um Blutzuckerwerte ohne Sensor manuell einzutragen</string>
+    <string name="settings_juggluco_active">● Juggluco-Broadcast aktiv (Daten werden empfangen)</string>
+    <string name="settings_juggluco_hint">Aktiviere in Juggluco unter Einstellungen → Send to xDrip / Glucodata den Broadcast. easyBOLUS empfängt die Werte automatisch im Hintergrund.</string>
+    <string name="settings_manual_active">Manueller Modus aktiv – Blutzucker direkt über „+ BZ“ oder „+ Eintrag“ erfassen.</string>
+    <string name="btn_load_demo">Demo-Daten laden</string>
+    <string name="btn_clear_demo">Demo löschen</string>
+    <string name="btn_save_settings">Einstellungen speichern</string>
+    <string name="settings_saved_feedback">Einstellungen gespeichert</string>
+</resources>

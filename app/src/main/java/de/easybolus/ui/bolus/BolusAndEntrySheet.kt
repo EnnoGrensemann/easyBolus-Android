@@ -1,5 +1,6 @@
 package de.easybolus.ui.bolus
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -12,12 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import android.app.TimePickerDialog
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,19 +39,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.easybolus.R
 import de.easybolus.data.local.DiaryEntryType
+import de.easybolus.data.settings.GlucoseUnit
 import de.easybolus.data.settings.UserSettings
 import de.easybolus.domain.BolusCalculator
-import de.easybolus.ui.theme.FabTeal
-import de.easybolus.ui.theme.HeaderGradientBottom
-import de.easybolus.ui.theme.TextPrimary
-import de.easybolus.ui.theme.TextSecondary
+import de.easybolus.domain.GlucoseFormatter
 import java.util.Calendar
 import java.util.Locale
 
@@ -64,7 +62,8 @@ fun BolusAndEntrySheet(
     settings: UserSettings,
     onDismiss: () -> Unit,
     onSaveBolusAndCarbs: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?, timestampMillis: Long) -> Unit,
-    onAddQuickEntry: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit
+    onAddQuickEntry: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit,
+    onSaveManualGlucose: (mgDl: Int, timestampMillis: Long) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -85,12 +84,12 @@ fun BolusAndEntrySheet(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Bolus-Rechner") }
+                    text = { Text(stringResource(R.string.tab_bolus_calc)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Schnell-Eintrag") }
+                    text = { Text(stringResource(R.string.tab_quick_entry)) }
                 )
             }
 
@@ -98,7 +97,7 @@ fun BolusAndEntrySheet(
 
             if (selectedTab == 0) {
                 BolusCalculatorTab(
-                    initialBg = currentBgMgDl ?: settings.targetBg,
+                    initialBgMgDl = currentBgMgDl ?: settings.targetBg,
                     currentIob = currentIob,
                     settings = settings,
                     onSave = { bolus, carbs, note, bg ->
@@ -108,12 +107,17 @@ fun BolusAndEntrySheet(
                 )
             } else {
                 QuickEntryTab(
+                    glucoseUnit = settings.glucoseUnit,
                     onSave = { type, bolus, carbs, basal, note, timestampMillis ->
                         onAddQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
                         onDismiss()
                     },
                     onSaveCombo = { bolus, carbs, note, timestampMillis ->
                         onSaveBolusAndCarbs(bolus, carbs, note, null, timestampMillis)
+                        onDismiss()
+                    },
+                    onSaveGlucose = { mgDl, timestampMillis ->
+                        onSaveManualGlucose(mgDl, timestampMillis)
                         onDismiss()
                     }
                 )
@@ -124,22 +128,27 @@ fun BolusAndEntrySheet(
 
 @Composable
 private fun BolusCalculatorTab(
-    initialBg: Int,
+    initialBgMgDl: Int,
     currentIob: Double,
     settings: UserSettings,
     onSave: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit
 ) {
-    var bgInput by remember { mutableStateOf(initialBg.toString()) }
+    val locale = Locale.getDefault()
+    val unit = settings.glucoseUnit
+    val unitLabel = GlucoseFormatter.unitLabel(unit)
+    val ieUnit = stringResource(R.string.unit_ie)
+
+    var bgInput by remember { mutableStateOf(GlucoseFormatter.formatInputValue(initialBgMgDl, unit)) }
     var carbsInput by remember { mutableStateOf("") }
     var noteInput by remember { mutableStateOf("") }
 
-    val bgVal = bgInput.toIntOrNull() ?: initialBg
+    val bgValMgDl = GlucoseFormatter.parseToMgDl(bgInput, unit) ?: initialBgMgDl
     val carbsVal = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
-    val currentHour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
+    val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val activeCarbRatio = settings.carbRatioForHour(currentHour)
 
     val result = BolusCalculator.calculate(
-        currentBgMgDl = bgVal,
+        currentBgMgDl = bgValMgDl,
         carbsGrams = carbsVal,
         activeIob = currentIob,
         settings = settings,
@@ -153,16 +162,18 @@ private fun BolusCalculatorTab(
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = bgInput,
-            onValueChange = { bgInput = it.filter { ch -> ch.isDigit() } },
-            label = { Text("Blutzucker (mg/dl)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            onValueChange = { bgInput = it },
+            label = { Text(stringResource(R.string.label_bg_unit, unitLabel)) },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (unit == GlucoseUnit.MG_DL) KeyboardType.Number else KeyboardType.Decimal
+            ),
             singleLine = true,
             modifier = Modifier.weight(1f)
         )
         OutlinedTextField(
             value = carbsInput,
             onValueChange = { carbsInput = it },
-            label = { Text("Kohlenhydrate (g)") },
+            label = { Text(stringResource(R.string.label_carbs_g)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.weight(1f)
@@ -183,7 +194,7 @@ private fun BolusCalculatorTab(
                     val updated = (carbsVal + addGrams).toInt()
                     carbsInput = updated.toString()
                 },
-                label = { Text("+${addGrams} g", fontSize = 12.sp) }
+                label = { Text("+$addGrams g", fontSize = 12.sp) }
             )
         }
     }
@@ -199,16 +210,38 @@ private fun BolusCalculatorTab(
         Column(modifier = Modifier.padding(16.dp)) {
             if (settings.useHourlyCarbRatio) {
                 Text(
-                    text = String.format(Locale.GERMANY, "Aktiver Stundenfaktor (%02d:00 Uhr): %.1f g/IE", currentHour, activeCarbRatio),
+                    text = stringResource(
+                        R.string.label_hourly_active,
+                        currentHour,
+                        String.format(locale, "%.1f", activeCarbRatio),
+                        ieUnit
+                    ),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
             }
-            BreakdownRow("Mahlzeiten-Bolus (${carbsVal.toInt()} g / $activeCarbRatio)", result.mealBolus)
-            BreakdownRow("Korrektur (${bgVal} → ${settings.targetBg} mg/dl)", result.correctionBolus)
-            BreakdownRow("Aktives Insulin (IOB)", -result.activeIob)
+            BreakdownRow(
+                label = stringResource(R.string.label_meal_bolus, carbsVal.toInt(), String.format(locale, "%.1f", activeCarbRatio)),
+                value = result.mealBolus,
+                ieUnit = ieUnit
+            )
+            BreakdownRow(
+                label = stringResource(
+                    R.string.label_correction,
+                    GlucoseFormatter.formatValue(bgValMgDl, unit, locale),
+                    GlucoseFormatter.formatValue(settings.targetBg, unit, locale),
+                    unitLabel
+                ),
+                value = result.correctionBolus,
+                ieUnit = ieUnit
+            )
+            BreakdownRow(
+                label = stringResource(R.string.label_active_iob),
+                value = -result.activeIob,
+                ieUnit = ieUnit
+            )
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -217,19 +250,23 @@ private fun BolusCalculatorTab(
             ) {
                 Column {
                     Text(
-                        text = "Pen-Empfehlung",
+                        text = stringResource(R.string.label_pen_recommendation),
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp
                     )
                     Text(
-                        text = "Gerundet auf ${settings.penStepSize} IE",
+                        text = stringResource(
+                            R.string.label_rounded_step,
+                            String.format(locale, "%.1f", settings.penStepSize),
+                            ieUnit
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
                 Text(
-                    text = String.format(Locale.GERMANY, "%.1f IE", result.recommendedUnits),
+                    text = String.format(locale, "%.1f %s", result.recommendedUnits, ieUnit),
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -259,7 +296,7 @@ private fun BolusCalculatorTab(
         OutlinedTextField(
             value = manualOverride,
             onValueChange = { manualOverride = it },
-            label = { Text("Gespritzter Bolus (IE)") },
+            label = { Text(stringResource(R.string.label_injected_bolus, ieUnit)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.weight(1f)
@@ -281,7 +318,7 @@ private fun BolusCalculatorTab(
     OutlinedTextField(
         value = noteInput,
         onValueChange = { noteInput = it },
-        label = { Text("Notiz (optional, z.B. Pizza, Sport)") },
+        label = { Text(stringResource(R.string.label_note_optional_hint)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
@@ -291,20 +328,20 @@ private fun BolusCalculatorTab(
     Button(
         onClick = {
             val finalBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
-            onSave(finalBolus, carbsVal, noteInput, bgVal)
+            onSave(finalBolus, carbsVal, noteInput, bgValMgDl)
         },
-        colors = ButtonDefaults.buttonColors(containerColor = FabTeal),
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
     ) {
-        Text("Speichern & Dokumentieren", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.btn_save_and_log), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun BreakdownRow(label: String, value: Double) {
+private fun BreakdownRow(label: String, value: Double, ieUnit: String) {
+    val locale = Locale.getDefault()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -314,7 +351,7 @@ private fun BreakdownRow(label: String, value: Double) {
         Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
         val sign = if (value > 0) "+" else ""
         Text(
-            text = String.format(Locale.GERMANY, "%s%.2f IE", sign, value),
+            text = String.format(locale, "%s%.2f %s", sign, value, ieUnit),
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
@@ -322,21 +359,27 @@ private fun BreakdownRow(label: String, value: Double) {
     }
 }
 
-private enum class QuickEntryMode(val label: String) {
-    CARBS_AND_BOLUS("KH + IE"),
-    CARBS(DiaryEntryType.CARBS.label),
-    BOLUS(DiaryEntryType.BOLUS.label),
-    BASAL(DiaryEntryType.BASAL.label),
-    NOTE(DiaryEntryType.NOTE.label)
+private enum class QuickEntryMode {
+    CARBS_AND_BOLUS,
+    GLUCOSE,
+    CARBS,
+    BOLUS,
+    BASAL,
+    NOTE
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickEntryTab(
+    glucoseUnit: GlucoseUnit,
     onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit,
-    onSaveCombo: (bolus: Double, carbs: Double, note: String?, timestampMillis: Long) -> Unit
+    onSaveCombo: (bolus: Double, carbs: Double, note: String?, timestampMillis: Long) -> Unit,
+    onSaveGlucose: (mgDl: Int, timestampMillis: Long) -> Unit
 ) {
     val context = LocalContext.current
+    val unitLabel = GlucoseFormatter.unitLabel(glucoseUnit)
+    val ieUnit = stringResource(R.string.unit_ie)
+
     val initialCal = remember { Calendar.getInstance() }
     var selectedHour by remember { mutableIntStateOf(initialCal.get(Calendar.HOUR_OF_DAY)) }
     var selectedMinute by remember { mutableIntStateOf(initialCal.get(Calendar.MINUTE)) }
@@ -365,6 +408,14 @@ private fun QuickEntryTab(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         QuickEntryMode.entries.forEach { mode ->
+            val modeLabel = when (mode) {
+                QuickEntryMode.CARBS_AND_BOLUS -> stringResource(R.string.mode_carbs_and_bolus)
+                QuickEntryMode.GLUCOSE -> stringResource(R.string.mode_bg)
+                QuickEntryMode.CARBS -> stringResource(R.string.type_carbs)
+                QuickEntryMode.BOLUS -> stringResource(R.string.type_bolus)
+                QuickEntryMode.BASAL -> stringResource(R.string.type_basal)
+                QuickEntryMode.NOTE -> stringResource(R.string.type_note)
+            }
             FilterChip(
                 selected = selectedMode == mode,
                 onClick = {
@@ -373,14 +424,14 @@ private fun QuickEntryTab(
                     carbsInput = ""
                     bolusInput = ""
                 },
-                label = { Text(mode.label, fontSize = 12.sp) }
+                label = { Text(modeLabel, fontSize = 12.sp) }
             )
         }
     }
 
     Spacer(modifier = Modifier.height(10.dp))
 
-    // Uhrzeit & Tag (Heute / Gestern) zum Nachtragen auswählen
+    // Uhrzeit & Tag (Heute / Gestern)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -404,16 +455,18 @@ private fun QuickEntryTab(
         ) {
             Icon(
                 imageVector = Icons.Default.Schedule,
-                contentDescription = "Uhrzeit wählen",
+                contentDescription = stringResource(R.string.label_time_pick_cd),
                 modifier = Modifier.padding(end = 6.dp)
             )
-            Text(String.format(Locale.GERMANY, "Uhrzeit: %02d:%02d", selectedHour, selectedMinute))
+            Text(stringResource(R.string.label_time_pick, selectedHour, selectedMinute))
         }
 
         FilterChip(
             selected = isYesterday,
             onClick = { isYesterday = !isYesterday },
-            label = { Text(if (isYesterday) "Gestern" else "Heute") }
+            label = {
+                Text(stringResource(if (isYesterday) R.string.day_yesterday else R.string.day_today))
+            }
         )
     }
 
@@ -425,7 +478,7 @@ private fun QuickEntryTab(
                 OutlinedTextField(
                     value = carbsInput,
                     onValueChange = { carbsInput = it },
-                    label = { Text("Kohlenhydrate (g)") },
+                    label = { Text(stringResource(R.string.label_carbs_g)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -433,7 +486,7 @@ private fun QuickEntryTab(
                 OutlinedTextField(
                     value = bolusInput,
                     onValueChange = { bolusInput = it },
-                    label = { Text("Bolus (IE)") },
+                    label = { Text(stringResource(R.string.label_bolus_unit, ieUnit)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -441,12 +494,25 @@ private fun QuickEntryTab(
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
+        QuickEntryMode.GLUCOSE -> {
+            OutlinedTextField(
+                value = valueInput,
+                onValueChange = { valueInput = it },
+                label = { Text(stringResource(R.string.label_bg_unit, unitLabel)) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (glucoseUnit == GlucoseUnit.MG_DL) KeyboardType.Number else KeyboardType.Decimal
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
         QuickEntryMode.NOTE -> Unit
         else -> {
             val label = when (selectedMode) {
-                QuickEntryMode.BOLUS -> "Bolus (IE)"
-                QuickEntryMode.CARBS -> "Kohlenhydrate (g)"
-                QuickEntryMode.BASAL -> "Basalinsulin (IE)"
+                QuickEntryMode.BOLUS -> stringResource(R.string.label_bolus_unit, ieUnit)
+                QuickEntryMode.CARBS -> stringResource(R.string.label_carbs_g)
+                QuickEntryMode.BASAL -> stringResource(R.string.label_basal_unit, ieUnit)
                 else -> ""
             }
             OutlinedTextField(
@@ -461,42 +527,64 @@ private fun QuickEntryTab(
         }
     }
 
-    OutlinedTextField(
-        value = noteInput,
-        onValueChange = { noteInput = it },
-        label = { Text(if (selectedMode == QuickEntryMode.NOTE) "Notiz / Sport / Ereignis" else "Notiz (optional)") },
-        singleLine = false,
-        modifier = Modifier.fillMaxWidth()
-    )
+    if (selectedMode != QuickEntryMode.GLUCOSE) {
+        OutlinedTextField(
+            value = noteInput,
+            onValueChange = { noteInput = it },
+            label = {
+                Text(
+                    stringResource(
+                        if (selectedMode == QuickEntryMode.NOTE) R.string.label_note_event
+                        else R.string.label_note_optional
+                    )
+                )
+            },
+            singleLine = false,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 
     Spacer(modifier = Modifier.height(18.dp))
 
     Button(
         onClick = {
             val ts = buildTimestampMillis()
-            if (selectedMode == QuickEntryMode.CARBS_AND_BOLUS) {
-                val carbs = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
-                val bolus = bolusInput.replace(',', '.').toDoubleOrNull() ?: 0.0
-                if (carbs > 0.0 || bolus > 0.0) {
-                    onSaveCombo(bolus, carbs, noteInput, ts)
+            when (selectedMode) {
+                QuickEntryMode.CARBS_AND_BOLUS -> {
+                    val carbs = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+                    val bolus = bolusInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+                    if (carbs > 0.0 || bolus > 0.0) {
+                        onSaveCombo(bolus, carbs, noteInput, ts)
+                    }
                 }
-            } else {
-                val num = valueInput.replace(',', '.').toDoubleOrNull()
-                when (selectedMode) {
-                    QuickEntryMode.BOLUS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BOLUS, num, null, null, noteInput, ts)
-                    QuickEntryMode.CARBS -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.CARBS, null, num, null, noteInput, ts)
-                    QuickEntryMode.BASAL -> if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BASAL, null, null, num, noteInput, ts)
-                    QuickEntryMode.NOTE -> if (noteInput.isNotBlank()) onSave(DiaryEntryType.NOTE, null, null, null, noteInput, ts)
-                    QuickEntryMode.CARBS_AND_BOLUS -> Unit
+                QuickEntryMode.GLUCOSE -> {
+                    val mgDl = GlucoseFormatter.parseToMgDl(valueInput, glucoseUnit)
+                    if (mgDl != null) {
+                        onSaveGlucose(mgDl, ts)
+                    }
+                }
+                QuickEntryMode.BOLUS -> {
+                    val num = valueInput.replace(',', '.').toDoubleOrNull()
+                    if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BOLUS, num, null, null, noteInput, ts)
+                }
+                QuickEntryMode.CARBS -> {
+                    val num = valueInput.replace(',', '.').toDoubleOrNull()
+                    if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.CARBS, null, num, null, noteInput, ts)
+                }
+                QuickEntryMode.BASAL -> {
+                    val num = valueInput.replace(',', '.').toDoubleOrNull()
+                    if ((num ?: 0.0) > 0.0) onSave(DiaryEntryType.BASAL, null, null, num, noteInput, ts)
+                }
+                QuickEntryMode.NOTE -> {
+                    if (noteInput.isNotBlank()) onSave(DiaryEntryType.NOTE, null, null, null, noteInput, ts)
                 }
             }
         },
-        colors = ButtonDefaults.buttonColors(containerColor = FabTeal),
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
     ) {
-        Text("Eintrag speichern", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.btn_save_entry), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     }
 }

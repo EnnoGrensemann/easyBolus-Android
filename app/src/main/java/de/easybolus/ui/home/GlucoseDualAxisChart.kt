@@ -40,14 +40,18 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.easybolus.R
 import de.easybolus.data.local.DiaryEntryEntity
 import de.easybolus.data.local.DiaryEntryType
 import de.easybolus.data.local.GlucoseReadingEntity
+import de.easybolus.data.settings.GlucoseUnit
 import de.easybolus.data.settings.UserSettings
+import de.easybolus.domain.GlucoseFormatter
 import de.easybolus.domain.IobCobCalculator
 import de.easybolus.ui.theme.BgHighOrange
 import de.easybolus.ui.theme.BgInRangeGreen
@@ -76,16 +80,32 @@ fun GlucoseDualAxisChart(
     windowHours: Int = 6,
     modifier: Modifier = Modifier
 ) {
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.GERMANY) }
+    val locale = Locale.getDefault()
+    val timeFormat = remember(locale) { SimpleDateFormat("HH:mm", locale) }
+    val dateFormat = remember(locale) { SimpleDateFormat("EE, dd.MM.", locale) }
+    val dateTimeFormat = remember(locale) { SimpleDateFormat("dd.MM. HH:mm", locale) }
+
+    val maxHistoryHours = 7f * 24f // 7x24h verschiebbar
     var visibleHours by remember(windowHours) { mutableFloatStateOf(windowHours.toFloat()) }
     var panBackMillis by remember { mutableLongStateOf(0L) }
     var selectedTimeMillis by remember { mutableStateOf<Long?>(null) }
 
+    val unit = settings.glucoseUnit
+    val unitLabel = GlucoseFormatter.unitLabel(unit)
+    val ieUnit = stringResource(R.string.unit_ie)
+    val bgAxisTitle = stringResource(R.string.chart_axis_bg, unitLabel)
+    val insAxisTitle = stringResource(R.string.chart_axis_insulin, ieUnit)
+    val targetLineLabel = stringResource(
+        R.string.chart_target_label,
+        GlucoseFormatter.formatValue(settings.targetBg, unit, locale)
+    )
+    val resetLabel = stringResource(R.string.chart_reset_now, windowHours)
+
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
-    val verticalGridColor = if (isDark) Color(0xFF2C2C2C) else Color(0xFFE2E8F0)
-    val horizontalGridColor = if (isDark) Color(0xFF232323) else Color(0xFFF1F5F9)
-    val axisBorderColor = if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)
+    val verticalGridColor = if (isDark) Color(0xFF323338) else Color(0xFFE5E7EB)
+    val horizontalGridColor = if (isDark) Color(0xFF2B2C30) else Color(0xFFF1F3F5)
+    val axisBorderColor = if (isDark) Color(0xFF45474F) else Color(0xFFCBD5E1)
     val targetBandColor = if (isDark) TargetBandGreenDark else TargetBandGreen
     val targetLineColor = if (isDark) Color(0xFFE0F2FE).copy(alpha = 0.88f) else Color(0xFF0F4C5C).copy(alpha = 0.82f)
 
@@ -95,10 +115,11 @@ fun GlucoseDualAxisChart(
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, zoom, _ ->
+                        // Maximal bis 24h herauszoombar, danach über 7 Tage (168h) verschiebbar
                         val newHours = (visibleHours / zoom).coerceIn(1f, 24f)
                         visibleHours = newHours
 
-                        val maxPanMillis = ((24f - newHours).coerceAtLeast(0f) * 3600_000L).toLong()
+                        val maxPanMillis = ((maxHistoryHours - newHours).coerceAtLeast(0f) * 3600_000L).toLong()
                         if (pan.x != 0f && size.width > 0) {
                             val msPerPx = (newHours * 3600_000f) / size.width.toFloat()
                             val deltaMs = (pan.x * msPerPx).toLong()
@@ -142,12 +163,26 @@ fun GlucoseDualAxisChart(
 
             val visibleReadings = readings.filter { it.timestampMillis in startTime..endTime }
 
-            // Linke Y-Achse (Blutzucker mg/dl): mindestens 0–300, bei höheren Werten dynamisch in 50er-Schritten
-            val maxReading = visibleReadings.maxOfOrNull { it.mgDl } ?: settings.targetRangeMax
-            val rawMax = max(maxReading, settings.targetRangeMax).toFloat()
-            val bgMin = 0f
-            val bgMax = max(300f, ceil((rawMax + 15f) / 50f) * 50f)
-            val bgSpan = (bgMax - bgMin).coerceAtLeast(50f)
+            // Linke Y-Achse (Blutzucker): mindestens 0–300 mg/dl bzw. 0–18 mmol/L
+            val maxReadingMgDl = visibleReadings.maxOfOrNull { it.mgDl } ?: settings.targetRangeMax
+            val rawMaxMgDl = max(maxReadingMgDl, settings.targetRangeMax).toFloat()
+            val bgMinDisplay = 0f
+            val bgMaxDisplay: Float
+            val bgTickStepDisplay: Int
+            if (unit == GlucoseUnit.MMOL_L) {
+                val rawMaxMmol = GlucoseFormatter.mgDlToMmol(rawMaxMgDl.toDouble()).toFloat()
+                bgMaxDisplay = max(18f, ceil((rawMaxMmol + 1f) / 3f) * 3f)
+                bgTickStepDisplay = 3
+            } else {
+                bgMaxDisplay = max(300f, ceil((rawMaxMgDl + 15f) / 50f) * 50f)
+                bgTickStepDisplay = 50
+            }
+            val bgSpanDisplay = (bgMaxDisplay - bgMinDisplay).coerceAtLeast(1f)
+
+            fun mgDlToDisplay(mgDl: Float): Float = when (unit) {
+                GlucoseUnit.MG_DL -> mgDl
+                GlucoseUnit.MMOL_L -> GlucoseFormatter.mgDlToMmol(mgDl.toDouble()).toFloat()
+            }
 
             // Exponentielle IOB-Kurve & COB vorab samplen für rechte Y-Achse (mindestens 0–10 IE)
             val sampleCount = 96
@@ -175,21 +210,23 @@ fun GlucoseDualAxisChart(
             fun xForTime(t: Long): Float =
                 leftPad + ((t - startTime).toFloat() / timeSpan) * chartW
 
-            fun yForBg(bg: Float): Float =
-                topPad + chartH - ((bg - bgMin) / bgSpan).coerceIn(0f, 1f) * chartH
+            fun yForBgDisplay(bgDisplay: Float): Float =
+                topPad + chartH - ((bgDisplay - bgMinDisplay) / bgSpanDisplay).coerceIn(0f, 1f) * chartH
+
+            fun yForBgMgDl(bgMgDl: Float): Float = yForBgDisplay(mgDlToDisplay(bgMgDl))
 
             fun yForIns(ie: Float): Float =
                 topPad + chartH - ((ie - insMin) / (insMax - insMin)).coerceIn(0f, 1f) * chartH
 
             // 1. Zielbereich-Band + deutliche gestrichelte Zielwert-Linie
-            val bandTop = yForBg(settings.targetRangeMax.toFloat())
-            val bandBottom = yForBg(settings.targetRangeMin.toFloat())
+            val bandTop = yForBgMgDl(settings.targetRangeMax.toFloat())
+            val bandBottom = yForBgMgDl(settings.targetRangeMin.toFloat())
             drawRect(
                 color = targetBandColor,
                 topLeft = Offset(leftPad, bandTop),
                 size = Size(chartW, (bandBottom - bandTop).coerceAtLeast(0f))
             )
-            val targetY = yForBg(settings.targetBg.toFloat())
+            val targetY = yForBgMgDl(settings.targetBg.toFloat())
             drawLine(
                 color = targetLineColor,
                 start = Offset(leftPad, targetY),
@@ -205,7 +242,7 @@ fun GlucoseDualAxisChart(
                 isFakeBoldText = true
             }
             drawContext.canvas.nativeCanvas.drawText(
-                "Ziel ${settings.targetBg}",
+                targetLineLabel,
                 leftPad + 6.dp.toPx(),
                 targetY - 4.dp.toPx(),
                 targetLabelPaint
@@ -258,17 +295,17 @@ fun GlucoseDualAxisChart(
                 tickCal.add(Calendar.MINUTE, stepMinutes)
             }
 
-            // 3. Linke Y-Achse (Blutzucker mg/dl)
+            // 3. Linke Y-Achse (Blutzucker mg/dl oder mmol/L)
             val leftLabelPaint = Paint().apply {
                 color = labelColor.toArgb()
                 textSize = 10.dp.toPx()
                 isAntiAlias = true
                 textAlign = Paint.Align.RIGHT
             }
-            val bgStartTick = bgMin.roundToInt()
-            val bgEndTick = bgMax.roundToInt()
-            for (bgTick in bgStartTick..bgEndTick step 50) {
-                val y = yForBg(bgTick.toFloat())
+            val bgStartTick = bgMinDisplay.roundToInt()
+            val bgEndTick = bgMaxDisplay.roundToInt()
+            for (bgTick in bgStartTick..bgEndTick step bgTickStepDisplay) {
+                val y = yForBgDisplay(bgTick.toFloat())
                 drawLine(
                     color = horizontalGridColor,
                     start = Offset(leftPad, y),
@@ -293,7 +330,7 @@ fun GlucoseDualAxisChart(
                 textAlign = Paint.Align.CENTER
             }
             drawContext.canvas.nativeCanvas.drawText(
-                "Blutzucker (mg/dl)",
+                bgAxisTitle,
                 12.dp.toPx(),
                 topPad + chartH / 2f,
                 axisTitlePaint
@@ -321,169 +358,171 @@ fun GlucoseDualAxisChart(
                     rightLabelPaint
                 )
             }
-        drawContext.canvas.nativeCanvas.save()
-        drawContext.canvas.nativeCanvas.rotate(-90f, size.width - 10.dp.toPx(), topPad + chartH / 2f)
-        val rightTitlePaint = Paint().apply {
-            color = IobCurveBlue.toArgb()
-            textSize = 11.dp.toPx()
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-        drawContext.canvas.nativeCanvas.drawText(
-            "Insulin (IE)",
-            size.width - 10.dp.toPx(),
-            topPad + chartH / 2f,
-            rightTitlePaint
-        )
-        drawContext.canvas.nativeCanvas.restore()
-
-        // Innerhalb des Chart-Rahmens clippen
-        clipRect(
-            left = leftPad,
-            top = topPad,
-            right = leftPad + chartW,
-            bottom = topPad + chartH
-        ) {
-            // 5. IOB-Fläche & Kurve (blau) + COB-Kurve (olivgrün)
-            val iobPath = Path()
-            val iobFillPath = Path()
-            val cobPath = Path()
-            val baseY = yForIns(0f)
-
-            for (i in 0..sampleCount) {
-                val t = startTime + (i.toFloat() / sampleCount * timeSpan).toLong()
-                val x = xForTime(t)
-                val yIob = yForIns(iobSamples[i].coerceAtMost(insMax))
-                val yCob = yForIns(cobScaledSamples[i].coerceAtMost(insMax))
-
-                if (i == 0) {
-                    iobPath.moveTo(x, yIob)
-                    iobFillPath.moveTo(x, baseY)
-                    iobFillPath.lineTo(x, yIob)
-                    cobPath.moveTo(x, yCob)
-                } else {
-                    iobPath.lineTo(x, yIob)
-                    iobFillPath.lineTo(x, yIob)
-                    cobPath.lineTo(x, yCob)
-                }
-                if (i == sampleCount) {
-                    iobFillPath.lineTo(x, baseY)
-                    iobFillPath.close()
-                }
-            }
-
-            drawPath(
-                path = iobFillPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(IobAreaBlue, Color.Transparent),
-                    startY = topPad + chartH * 0.35f,
-                    endY = baseY
-                )
-            )
-            drawPath(
-                path = iobPath,
-                color = IobCurveBlue,
-                style = Stroke(width = 1.8.dp.toPx())
-            )
-            drawPath(
-                path = cobPath,
-                color = CobCurveOlive,
-                style = Stroke(width = 1.8.dp.toPx())
-            )
-
-            // 6. Glukose-Punkte (farbig je nach Zielbereich)
-            visibleReadings.forEach { reading ->
-                val x = xForTime(reading.timestampMillis)
-                val y = yForBg(reading.mgDl.toFloat())
-                val dotColor = when {
-                    reading.mgDl < settings.targetRangeMin -> BgLowRed
-                    reading.mgDl > settings.targetRangeMax -> BgHighOrange
-                    else -> BgInRangeGreen
-                }
-                drawCircle(
-                    color = dotColor,
-                    radius = 1.8.dp.toPx(),
-                    center = Offset(x, y)
-                )
-            }
-
-            // 7. Bolus- & KH-Marker (Dreiecke)
-            val bolusLabelPaint = Paint().apply {
-                color = BolusMarkerBlue.toArgb()
-                textSize = 10.dp.toPx()
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(-90f, size.width - 10.dp.toPx(), topPad + chartH / 2f)
+            val rightTitlePaint = Paint().apply {
+                color = IobCurveBlue.toArgb()
+                textSize = 11.dp.toPx()
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
-                isFakeBoldText = true
             }
-            entries.filter { it.timestampMillis in startTime..endTime }.forEach { entry ->
-                val x = xForTime(entry.timestampMillis)
-                val bgRef = (entry.bgAtTimeMgDl ?: settings.targetBg).toFloat()
-                val yRef = yForBg(bgRef)
+            drawContext.canvas.nativeCanvas.drawText(
+                insAxisTitle,
+                size.width - 10.dp.toPx(),
+                topPad + chartH / 2f,
+                rightTitlePaint
+            )
+            drawContext.canvas.nativeCanvas.restore()
 
-                if (entry.type == DiaryEntryType.BOLUS && (entry.bolusUnits ?: 0.0) > 0.0) {
-                    val triSize = 5.dp.toPx()
-                    val triPath = Path().apply {
-                        moveTo(x - triSize, yRef - 14.dp.toPx())
-                        lineTo(x + triSize, yRef - 14.dp.toPx())
-                        lineTo(x, yRef - 6.dp.toPx())
-                        close()
+            // Innerhalb des Chart-Rahmens clippen
+            clipRect(
+                left = leftPad,
+                top = topPad,
+                right = leftPad + chartW,
+                bottom = topPad + chartH
+            ) {
+                // 5. Exponentielle IOB-Fläche & Kurve (blau) + COB-Kurve (olivgrün)
+                val iobPath = Path()
+                val iobFillPath = Path()
+                val cobPath = Path()
+                val baseY = yForIns(0f)
+
+                for (i in 0..sampleCount) {
+                    val t = startTime + (i.toFloat() / sampleCount * timeSpan).toLong()
+                    val x = xForTime(t)
+                    val yIob = yForIns(iobSamples[i].coerceAtMost(insMax))
+                    val yCob = yForIns(cobScaledSamples[i].coerceAtMost(insMax))
+
+                    if (i == 0) {
+                        iobPath.moveTo(x, yIob)
+                        iobFillPath.moveTo(x, baseY)
+                        iobFillPath.lineTo(x, yIob)
+                        cobPath.moveTo(x, yCob)
+                    } else {
+                        iobPath.lineTo(x, yIob)
+                        iobFillPath.lineTo(x, yIob)
+                        cobPath.lineTo(x, yCob)
                     }
-                    drawPath(triPath, color = BolusMarkerBlue)
-                    val unitsText = String.format(Locale.GERMANY, "%.1f", entry.bolusUnits)
-                    drawContext.canvas.nativeCanvas.drawText(
-                        unitsText,
-                        x,
-                        yRef - 17.dp.toPx(),
-                        bolusLabelPaint
+                    if (i == sampleCount) {
+                        iobFillPath.lineTo(x, baseY)
+                        iobFillPath.close()
+                    }
+                }
+
+                drawPath(
+                    path = iobFillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(IobAreaBlue, Color.Transparent),
+                        startY = topPad + chartH * 0.35f,
+                        endY = baseY
                     )
-                } else if (entry.type == DiaryEntryType.CARBS && (entry.carbsGrams ?: 0.0) > 0.0) {
-                    val triSize = 5.dp.toPx()
-                    val triPath = Path().apply {
-                        moveTo(x, yRef + 6.dp.toPx())
-                        lineTo(x - triSize, yRef + 14.dp.toPx())
-                        lineTo(x + triSize, yRef + 14.dp.toPx())
-                        close()
+                )
+                drawPath(
+                    path = iobPath,
+                    color = IobCurveBlue,
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+                drawPath(
+                    path = cobPath,
+                    color = CobCurveOlive,
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+
+                // 6. Feine Glukose-Punkte (Rot-Grün-freundliche Farben je nach Zielbereich)
+                visibleReadings.forEach { reading ->
+                    val x = xForTime(reading.timestampMillis)
+                    val y = yForBgMgDl(reading.mgDl.toFloat())
+                    val dotColor = when {
+                        reading.mgDl < settings.targetRangeMin -> BgLowRed
+                        reading.mgDl > settings.targetRangeMax -> BgHighOrange
+                        else -> BgInRangeGreen
                     }
-                    drawPath(triPath, color = CarbsMarkerOrange)
+                    drawCircle(
+                        color = dotColor,
+                        radius = 1.8.dp.toPx(),
+                        center = Offset(x, y)
+                    )
+                }
+
+                // 7. Bolus- & KH-Marker (Dreiecke)
+                val bolusLabelPaint = Paint().apply {
+                    color = BolusMarkerBlue.toArgb()
+                    textSize = 10.dp.toPx()
+                    isAntiAlias = true
+                    textAlign = Paint.Align.CENTER
+                    isFakeBoldText = true
+                }
+                entries.filter { it.timestampMillis in startTime..endTime }.forEach { entry ->
+                    val x = xForTime(entry.timestampMillis)
+                    val bgRef = (entry.bgAtTimeMgDl ?: settings.targetBg).toFloat()
+                    val yRef = yForBgMgDl(bgRef)
+
+                    if (entry.type == DiaryEntryType.BOLUS && (entry.bolusUnits ?: 0.0) > 0.0) {
+                        val triSize = 5.dp.toPx()
+                        val triPath = Path().apply {
+                            moveTo(x - triSize, yRef - 14.dp.toPx())
+                            lineTo(x + triSize, yRef - 14.dp.toPx())
+                            lineTo(x, yRef - 6.dp.toPx())
+                            close()
+                        }
+                        drawPath(triPath, color = BolusMarkerBlue)
+                        val unitsText = String.format(locale, "%.1f", entry.bolusUnits)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            unitsText,
+                            x,
+                            yRef - 17.dp.toPx(),
+                            bolusLabelPaint
+                        )
+                    } else if (entry.type == DiaryEntryType.CARBS && (entry.carbsGrams ?: 0.0) > 0.0) {
+                        val triSize = 5.dp.toPx()
+                        val triPath = Path().apply {
+                            moveTo(x, yRef + 6.dp.toPx())
+                            lineTo(x - triSize, yRef + 14.dp.toPx())
+                            lineTo(x + triSize, yRef + 14.dp.toPx())
+                            close()
+                        }
+                        drawPath(triPath, color = CarbsMarkerOrange)
+                    }
+                }
+
+                // 8. Crosshair bei Antippen
+                selectedTimeMillis?.let { selMs ->
+                    if (selMs in startTime..endTime) {
+                        val cx = xForTime(selMs)
+                        drawLine(
+                            color = labelColor.copy(alpha = 0.7f),
+                            start = Offset(cx, topPad),
+                            end = Offset(cx, topPad + chartH),
+                            strokeWidth = 1.2.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+                        )
+                    }
                 }
             }
-            // 8. Crosshair bei Antippen
-            selectedTimeMillis?.let { selMs ->
-                if (selMs in startTime..endTime) {
-                    val cx = xForTime(selMs)
-                    drawLine(
-                        color = labelColor.copy(alpha = 0.7f),
-                        start = Offset(cx, topPad),
-                        end = Offset(cx, topPad + chartH),
-                        strokeWidth = 1.2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
-                    )
-                }
-            }
+
+            // Achsen-Rahmenlinien
+            drawLine(
+                color = axisBorderColor,
+                start = Offset(leftPad, topPad),
+                end = Offset(leftPad, topPad + chartH),
+                strokeWidth = 1.dp.toPx()
+            )
+            drawLine(
+                color = axisBorderColor,
+                start = Offset(leftPad, topPad + chartH),
+                end = Offset(leftPad + chartW, topPad + chartH),
+                strokeWidth = 1.dp.toPx()
+            )
+            drawLine(
+                color = axisBorderColor,
+                start = Offset(leftPad + chartW, topPad),
+                end = Offset(leftPad + chartW, topPad + chartH),
+                strokeWidth = 1.dp.toPx()
+            )
         }
 
-        // Achsen-Rahmenlinien
-        drawLine(
-            color = axisBorderColor,
-            start = Offset(leftPad, topPad),
-            end = Offset(leftPad, topPad + chartH),
-            strokeWidth = 1.dp.toPx()
-        )
-        drawLine(
-            color = axisBorderColor,
-            start = Offset(leftPad, topPad + chartH),
-            end = Offset(leftPad + chartW, topPad + chartH),
-            strokeWidth = 1.dp.toPx()
-        )
-        drawLine(
-            color = axisBorderColor,
-            start = Offset(leftPad + chartW, topPad),
-            end = Offset(leftPad + chartW, topPad + chartH),
-            strokeWidth = 1.dp.toPx()
-        )
-        }
-
-        // Kompakte IOB / COB Legende oben links
+        // Kompakte IOB / COB Legende oben links (+ Datumsanzeige wenn in den letzten 7 Tagen zurückgescrollt)
+        val isPanned = panBackMillis > 15 * 60_000L
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
             shape = RoundedCornerShape(10.dp),
@@ -506,6 +545,15 @@ fun GlucoseDualAxisChart(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("COB", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 }
+                if (isPanned) {
+                    val centerMs = System.currentTimeMillis() - panBackMillis - (visibleHours * 1800_000f).toLong()
+                    Text(
+                        text = dateFormat.format(Date(centerMs)),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
 
@@ -525,7 +573,7 @@ fun GlucoseDualAxisChart(
                     }
             ) {
                 Text(
-                    text = "Jetzt (${windowHours}h)",
+                    text = resetLabel,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -545,8 +593,9 @@ fun GlucoseDualAxisChart(
                 diaHours = settings.diaHours,
                 peakMinutes = settings.insulinType.peakMinutes
             )
-            val bgPart = nearest?.let { "${it.mgDl} mg/dl · " } ?: ""
-            val label = "${timeFormat.format(Date(displayMs))} · ${bgPart}IOB ${String.format(Locale.GERMANY, "%.1f IE", iobAtTime)}"
+            val bgPart = nearest?.let { "${GlucoseFormatter.formatValue(it.mgDl, unit, locale)} $unitLabel · " } ?: ""
+            val timeStr = if (isPanned) dateTimeFormat.format(Date(displayMs)) else timeFormat.format(Date(displayMs))
+            val label = "$timeStr · ${bgPart}IOB ${String.format(locale, "%.1f %s", iobAtTime, ieUnit)}"
 
             Surface(
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),

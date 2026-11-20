@@ -26,13 +26,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import de.easybolus.ui.theme.FabTeal
+import de.easybolus.R
 import java.util.Locale
 
 data class BolusReminderData(
@@ -45,6 +46,9 @@ fun BolusReminderDialog(
     reminder: BolusReminderData,
     onDismiss: () -> Unit
 ) {
+    val locale = Locale.getDefault()
+    val ieUnit = stringResource(R.string.unit_ie)
+    val accent = MaterialTheme.colorScheme.primary
     val progress = remember(reminder) { Animatable(1f) }
 
     LaunchedEffect(reminder) {
@@ -82,11 +86,11 @@ fun BolusReminderDialog(
                     Icon(
                         imageVector = Icons.Default.Vaccines,
                         contentDescription = null,
-                        tint = FabTeal,
+                        tint = accent,
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
-                        text = "Jetzt spritzen",
+                        text = stringResource(R.string.reminder_inject_now),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
@@ -94,9 +98,9 @@ fun BolusReminderDialog(
                 }
 
                 Text(
-                    text = String.format(Locale.GERMANY, "%.1f IE", reminder.bolusUnits),
+                    text = String.format(locale, "%.1f %s", reminder.bolusUnits, ieUnit),
                     style = TextStyle(
-                        color = FabTeal,
+                        color = accent,
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Bold,
                         fontFeatureSettings = "tnum"
@@ -106,7 +110,7 @@ fun BolusReminderDialog(
                 val carbs = reminder.carbsGrams
                 if (carbs != null && carbs > 0.0) {
                     Text(
-                        text = "zu ${carbs.toInt()} g KH",
+                        text = stringResource(R.string.reminder_for_carbs, carbs.toInt()),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium
@@ -117,7 +121,7 @@ fun BolusReminderDialog(
 
                 LinearProgressIndicator(
                     progress = { progress.value },
-                    color = FabTeal,
+                    color = accent,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -126,7 +130,7 @@ fun BolusReminderDialog(
                 )
 
                 Text(
-                    text = "Verschwindet automatisch · Tippe daneben zum Schließen",
+                    text = stringResource(R.string.reminder_auto_close),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp
                 )

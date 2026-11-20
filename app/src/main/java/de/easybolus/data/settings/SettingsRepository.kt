@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "easybolus_settings")
@@ -18,6 +19,11 @@ enum class ThemeMode(val label: String) {
     SYSTEM("System"),
     LIGHT("Hell"),
     DARK("Dunkel")
+}
+
+enum class GlucoseUnit(val label: String) {
+    MG_DL("mg/dl"),
+    MMOL_L("mmol/L")
 }
 
 enum class InsulinType(val label: String, val shortLabel: String, val peakMinutes: Double) {
@@ -37,7 +43,9 @@ data class UserSettings(
     val insulinType: InsulinType = InsulinType.RAPID,
     val penStepSize: Double = 0.5,          // 0.5 IE oder 1.0 IE
     val carbAbsorptionHours: Double = 3.0,  // Dauer für lineare COB-Anzeige (h)
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val glucoseUnit: GlucoseUnit = GlucoseUnit.MG_DL,
+    val jugglucoEnabled: Boolean = true
 ) {
     fun carbRatioForHour(hour: Int): Double {
         if (!useHourlyCarbRatio || hourlyCarbRatios.size != 24) return carbRatio
@@ -60,6 +68,8 @@ class SettingsRepository(private val context: Context) {
         val PEN_STEP_SIZE = doublePreferencesKey("pen_step_size")
         val CARB_ABSORPTION_HOURS = doublePreferencesKey("carb_absorption_hours")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val GLUCOSE_UNIT = stringPreferencesKey("glucose_unit")
+        val JUGGLUCO_ENABLED = booleanPreferencesKey("juggluco_enabled")
     }
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
@@ -75,6 +85,9 @@ class SettingsRepository(private val context: Context) {
         val parsedInsulinType = prefs[Keys.INSULIN_TYPE]
             ?.let { raw -> InsulinType.entries.firstOrNull { it.name == raw } }
             ?: InsulinType.RAPID
+        val parsedUnit = prefs[Keys.GLUCOSE_UNIT]
+            ?.let { raw -> GlucoseUnit.entries.firstOrNull { it.name == raw } }
+            ?: GlucoseUnit.MG_DL
 
         UserSettings(
             carbRatio = baseCarbRatio,
@@ -88,8 +101,16 @@ class SettingsRepository(private val context: Context) {
             insulinType = parsedInsulinType,
             penStepSize = prefs[Keys.PEN_STEP_SIZE] ?: 0.5,
             carbAbsorptionHours = prefs[Keys.CARB_ABSORPTION_HOURS] ?: 3.0,
-            themeMode = parsedThemeMode
+            themeMode = parsedThemeMode,
+            glucoseUnit = parsedUnit,
+            jugglucoEnabled = prefs[Keys.JUGGLUCO_ENABLED] ?: true
         )
+    }
+
+    suspend fun isJugglucoEnabled(): Boolean {
+        return context.dataStore.data.map { prefs ->
+            prefs[Keys.JUGGLUCO_ENABLED] ?: true
+        }.first()
     }
 
     suspend fun updateSettings(settings: UserSettings) {
@@ -110,6 +131,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.PEN_STEP_SIZE] = if (settings.penStepSize >= 1.0) 1.0 else 0.5
             prefs[Keys.CARB_ABSORPTION_HOURS] = settings.carbAbsorptionHours.coerceIn(1.0, 6.0)
             prefs[Keys.THEME_MODE] = settings.themeMode.name
+            prefs[Keys.GLUCOSE_UNIT] = settings.glucoseUnit.name
+            prefs[Keys.JUGGLUCO_ENABLED] = settings.jugglucoEnabled
         }
     }
 }

@@ -1,3 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">easyBOLUS</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_diary">Diary</string>
+    <string name="nav_settings">Settings</string>
+    <string name="fab_entry">Entry</string>
+    <string name="fab_entry_cd">Calculate bolus or add entry</string>
+
+    <!-- Units -->
+    <string name="unit_mg_dl">mg/dl</string>
+    <string name="unit_mmol_l">mmol/L</string>
+    <string name="unit_ie">U</string>
+    <string name="unit_carbs_short">Carbs</string>
+
+    <!-- Home -->
+    <string name="waiting_for_juggluco">Waiting for Juggluco broadcast…</string>
+    <string name="no_manual_reading">No reading yet</string>
+    <string name="just_now">just now</string>
+    <string name="minutes_ago">%1$d min ago</string>
+    <string name="hours_ago">%1$d h ago</string>
+    <string name="manual_bg_short">+ BG</string>
+    <string name="manual_bg_dialog_title">Log blood glucose</string>
+    <string name="manual_bg_input_label">Blood glucose (%1$s)</string>
+    <string name="chart_empty_juggluco">No history data yet.\nEnable broadcast in Juggluco (glucodata.Minute / xDrip) or load demo data in Settings.</string>
+    <string name="chart_empty_manual">No history data yet.\nTap \"+ BG\" or \"+ Entry\" to log your first blood glucose reading.</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistics</string>
+    <string name="period_today">Today</string>
+    <string name="period_24h">24h</string>
+    <string name="period_7d">7d</string>
+    <string name="period_90d">90d</string>
+    <string name="stat_low">Low %1$d%%</string>
+    <string name="stat_low_empty">Low --</string>
+    <string name="stat_tir">TIR %1$d%%</string>
+    <string name="stat_tir_empty">TIR --</string>
+    <string name="stat_high">High %1$d%%</string>
+    <string name="stat_high_empty">High --</string>
+    <string name="stat_avg_bg">Avg BG</string>
+    <string name="stat_gmi">GMI</string>
+    <string name="stat_ehba1c">eHbA1c</string>
+    <string name="stat_bolus">Bolus</string>
+    <string name="stat_carbs">Carbs</string>
+    <string name="stat_per_day">Avg %1$s/d</string>
+
+    <!-- Chart -->
+    <string name="chart_axis_bg">Blood glucose (%1$s)</string>
+    <string name="chart_axis_insulin">Insulin (%1$s)</string>
+    <string name="chart_target_label">Target %1$s</string>
+    <string name="chart_reset_now">Now (%1$dh)</string>
+
+    <!-- Diary -->
+    <string name="diary_export_cd">Export CSV</string>
+    <string name="diary_empty">No diary entries yet.\nTap \"+ Entry\" on Home to log a bolus or meal.</string>
+    <string name="filter_all">All</string>
+    <string name="type_bolus">Bolus</string>
+    <string name="type_carbs">Carbs</string>
+    <string name="type_basal">Basal</string>
+    <string name="type_note">Note</string>
+    <string name="day_today">Today</string>
+    <string name="day_yesterday">Yesterday</string>
+    <string name="diary_bolus_fmt">Bolus: %1$s %2$s</string>
+    <string name="diary_carbs_fmt">Carbs: %1$s g</string>
+    <string name="diary_basal_fmt">Basal: %1$s %2$s</string>
+    <string name="diary_edit_title">Edit entry</string>
+    <string name="diary_edit_group_title">Edit entries (%1$s)</string>
+    <string name="diary_value_label">Value</string>
+    <string name="diary_note_label">Note</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+
+    <!-- Bolus & Quick Entry Sheet -->
+    <string name="tab_bolus_calc">Bolus Calculator</string>
+    <string name="tab_quick_entry">Quick Entry</string>
+    <string name="label_bg_unit">Blood glucose (%1$s)</string>
+    <string name="label_carbs_g">Carbs (g)</string>
+    <string name="label_hourly_active">Active hourly ratio (%1$02d:00): %2$s g/%3$s</string>
+    <string name="label_meal_bolus">Meal bolus (%1$d g / %2$s)</string>
+    <string name="label_correction">Correction (%1$s → %2$s %3$s)</string>
+    <string name="label_active_iob">Active insulin (IOB)</string>
+    <string name="label_pen_recommendation">Pen recommendation</string>
+    <string name="label_rounded_step">Rounded to %1$s %2$s</string>
+    <string name="label_injected_bolus">Injected bolus (%1$s)</string>
+    <string name="label_note_optional_hint">Note (optional, e.g. Pizza, Sport)</string>
+    <string name="btn_save_and_log">Save &amp; log</string>
+    <string name="mode_carbs_and_bolus">Carbs + U</string>
+    <string name="mode_bg">BG</string>
+    <string name="label_time_pick">Time: %1$02d:%2$02d</string>
+    <string name="label_time_pick_cd">Choose time</string>
+    <string name="label_bolus_unit">Bolus (%1$s)</string>
+    <string name="label_basal_unit">Basal insulin (%1$s)</string>
+    <string name="label_note_event">Note / Sport / Event</string>
+    <string name="label_note_optional">Note (optional)</string>
+    <string name="btn_save_entry">Save entry</string>
+
+    <!-- Bolus Reminder Dialog -->
+    <string name="reminder_inject_now">Inject now</string>
+    <string name="reminder_for_carbs">for %1$d g carbs</string>
+    <string name="reminder_auto_close">Closes automatically · Tap outside to dismiss</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance &amp; Units</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_bg_unit">Glucose unit</string>
+    <string name="settings_factors_title">Bolus &amp; Insulin Factors</string>
+    <string name="settings_carb_ratio">Carb ratio (g / 1 %1$s)</string>
+    <string name="settings_isf">Correction factor (%1$s)</string>
+    <string name="settings_dia">Insulin duration DIA (h)</string>
+    <string name="settings_insulin_profile">Insulin profile (IOB curve)</string>
+    <string name="insulin_rapid_short">Rapid (75 min)</string>
+    <string name="insulin_ultra_rapid_short">Ultra-rapid (55 min)</string>
+    <string name="settings_hourly_carb_ratio">Hourly carb ratio</string>
+    <string name="settings_hourly_carb_ratio_sub">Set an individual carb ratio for each hour (00–23)</string>
+    <string name="settings_hourly_expand">Edit 24-hour values</string>
+    <string name="settings_hourly_collapse">Collapse 24-hour values</string>
+    <string name="settings_hourly_copy_base">Apply base carb ratio (%1$s) to all hours</string>
+    <string name="settings_target_pen_title">Target Range &amp; Pen</string>
+    <string name="settings_target_bg">Target BG (%1$s)</string>
+    <string name="settings_range_min">Target range min (%1$s)</string>
+    <string name="settings_range_max">Target range max (%1$s)</string>
+    <string name="settings_pen_step">Pen step size</string>
+    <string name="settings_pen_half">0.5 U (Half-unit)</string>
+    <string name="settings_pen_full">1.0 U (Standard)</string>
+    <string name="settings_sensor_title">Sensor Broadcast &amp; Demo Data</string>
+    <string name="settings_juggluco_toggle">Receive Juggluco / xDrip broadcast</string>
+    <string name="settings_juggluco_toggle_sub">Turn off to enter blood glucose manually without a CGM sensor</string>
+    <string name="settings_juggluco_active">● Juggluco broadcast active (receiving data)</string>
+    <string name="settings_juggluco_hint">Enable \"Send to xDrip / Glucodata\" in Juggluco settings. easyBOLUS receives values automatically in the background.</string>
+    <string name="settings_manual_active">Manual mode active – enter blood glucose directly via \"+ BG\" or \"+ Entry\".</string>
+    <string name="btn_load_demo">Load demo data</string>
+    <string name="btn_clear_demo">Clear demo</string>
+    <string name="btn_save_settings">Save settings</string>
+    <string name="settings_saved_feedback">Settings saved</string>
 </resources>
