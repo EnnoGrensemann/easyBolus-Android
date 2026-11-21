@@ -6,13 +6,16 @@
     android:background="@drawable/widget_bg"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="12dp">
+    android:paddingStart="12dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
-    <!-- Linke Spalte: Live-BZ, Trend, Delta/Zeit, IOB & COB Pills -->
+    <!-- Linke Spalte: Live-BZ, Trend, Δ + Zeit, IOB & COB Pills (ohne Einheit) -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:layout_weight="0.95"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -27,9 +30,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="●"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textColor="#00A884"
-                android:layout_marginEnd="6dp" />
+                android:layout_marginEnd="5dp" />
 
             <TextView
                 android:id="@+id/widget_bg_value"
@@ -38,32 +41,19 @@
                 android:text="---"
                 android:textSize="36sp"
                 android:textStyle="normal"
+                android:includeFontPadding="false"
                 android:fontFeatureSettings="tnum"
                 android:textColor="@color/widget_text_primary" />
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/widget_trend"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:layout_marginStart="5dp">
-
-                <TextView
-                    android:id="@+id/widget_trend"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textSize="22sp"
-                    android:textColor="@color/widget_text_primary" />
-
-                <TextView
-                    android:id="@+id/widget_unit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="mg/dl"
-                    android:textSize="10sp"
-                    android:textColor="@color/widget_text_secondary" />
-            </LinearLayout>
+                android:layout_marginStart="4dp"
+                android:text=""
+                android:textSize="24sp"
+                android:includeFontPadding="false"
+                android:textColor="@color/widget_text_primary" />
         </LinearLayout>
 
         <TextView
@@ -76,26 +66,26 @@
             android:ellipsize="end"
             android:fontFeatureSettings="tnum"
             android:textColor="@color/widget_text_secondary"
-            android:layout_marginTop="2dp" />
+            android:layout_marginTop="4dp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="7dp">
 
             <TextView
                 android:id="@+id/widget_iob"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_iob"
-                android:paddingStart="9dp"
-                android:paddingEnd="9dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
                 android:text="0,00 IE"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />
@@ -105,13 +95,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_cob"
-                android:paddingStart="9dp"
-                android:paddingEnd="9dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
-                android:layout_marginStart="6dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:layout_marginStart="5dp"
                 android:text="0,0 g"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />
@@ -122,19 +112,19 @@
     <ImageView
         android:layout_width="1dp"
         android:layout_height="match_parent"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
         android:background="@color/widget_divider"
         android:contentDescription="@null" />
 
-    <!-- Rechte Spalte: Live-Mini-Chart als gerendertes Bitmap -->
+    <!-- Rechte Spalte: Maximale Breite für Live-Mini-Chart ohne Y-Achse -->
     <ImageView
         android:id="@+id/widget_chart_image"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1.15"
-        android:scaleType="fitCenter"
+        android:layout_weight="1.45"
+        android:scaleType="fitXY"
         android:contentDescription="@string/app_name" />
 </LinearLayout>

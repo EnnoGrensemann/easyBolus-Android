@@ -9,10 +9,12 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.Build
+import android.os.Bundle
+import android.util.SizeF
 import android.widget.RemoteViews
 import de.easybolus.MainActivity
 import de.easybolus.R
@@ -34,7 +36,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 class EasyBolusWidgetProvider : AppWidgetProvider() {
 
@@ -47,6 +48,22 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 updateWidgetsNow(context, appWidgetManager, appWidgetIds)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                updateWidgetsNow(context, appWidgetManager, intArrayOf(appWidgetId))
             } finally {
                 pendingResult.finish()
             }
@@ -96,7 +113,6 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
 
             val locale = Locale.getDefault()
             val unit = settings.glucoseUnit
-            val unitLabel = GlucoseFormatter.unitLabel(unit)
             val ieUnit = context.getString(R.string.unit_ie)
 
             val minsAgo = latest?.let { ((now - it.timestampMillis) / 60_000L).coerceAtLeast(0L) }
@@ -123,7 +139,13 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                     cur.mgDl - prev.mgDl
                 } else null
             }
-            val timeStr = when (minsAgo) {
+            val deltaPart = if (!isStaleCgm && deltaMgDl != null) {
+                "Δ ${GlucoseFormatter.formatSignedDelta(deltaMgDl, unit, locale)}"
+            } else {
+                null
+            }
+
+            val timeStrFull = when (minsAgo) {
                 null -> if (settings.jugglucoEnabled) {
                     context.getString(R.string.waiting_for_juggluco)
                 } else {
@@ -133,19 +155,39 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 in 1L..119L -> context.getString(R.string.minutes_ago, minsAgo)
                 else -> context.getString(R.string.hours_ago, minsAgo / 60L)
             }
-            val subtitle = if (!isStaleCgm && deltaMgDl != null) {
-                "${GlucoseFormatter.formatSignedDelta(deltaMgDl, unit, locale)} $unitLabel · $timeStr"
-            } else {
-                timeStr
+            val timeStrCompact = when (minsAgo) {
+                null -> "--"
+                0L -> context.getString(R.string.just_now)
+                in 1L..119L -> "${minsAgo}m"
+                else -> "${minsAgo / 60L}h"
             }
+
+            val subtitleFull = if (deltaPart != null) "$deltaPart · $timeStrFull" else timeStrFull
+            val subtitleCompact = if (deltaPart != null) "$deltaPart · $timeStrCompact" else timeStrCompact
+
+            val iobStr = String.format(locale, "%.2f %s", iob, ieUnit)
+            val cobStr = String.format(locale, "%.1f g", cob)
 
             val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
-            val chartBitmap = renderMiniChartBitmap(
+
+            val regularChartBitmap = renderMiniChartBitmap(
                 readings = readings,
                 settings = settings,
                 nowMillis = now,
-                isDark = isNight
+                isDark = isNight,
+                width = 560,
+                height = 220,
+                compact = false
+            )
+            val compactChartBitmap = renderMiniChartBitmap(
+                readings = readings,
+                settings = settings,
+                nowMillis = now,
+                isDark = isNight,
+                width = 560,
+                height = 130,
+                compact = true
             )
 
             val launchIntent = Intent(context, MainActivity::class.java).apply {
@@ -158,19 +200,44 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            for (appWidgetId in widgetIds) {
-                val views = RemoteViews(context.packageName, R.layout.widget_easybolus).apply {
+            fun buildRemoteViews(layoutRes: Int, subtitle: String, chart: Bitmap): RemoteViews {
+                return RemoteViews(context.packageName, layoutRes).apply {
                     setOnClickPendingIntent(R.id.widget_root, pendingIntent)
                     setTextViewText(R.id.widget_bg_value, bgText)
                     setTextViewText(R.id.widget_trend, trendText)
-                    setTextViewText(R.id.widget_unit, unitLabel)
                     setTextColor(R.id.widget_status_dot, dotColor)
                     setTextViewText(R.id.widget_subtitle, subtitle)
-                    setTextViewText(R.id.widget_iob, String.format(locale, "%.2f %s", iob, ieUnit))
-                    setTextViewText(R.id.widget_cob, String.format(locale, "%.1f g", cob))
-                    setImageViewBitmap(R.id.widget_chart_image, chartBitmap)
+                    setTextViewText(R.id.widget_iob, iobStr)
+                    setTextViewText(R.id.widget_cob, cobStr)
+                    setImageViewBitmap(R.id.widget_chart_image, chart)
                 }
-                manager.updateAppWidget(appWidgetId, views)
+            }
+
+            for (appWidgetId in widgetIds) {
+                val compactViews = buildRemoteViews(
+                    R.layout.widget_easybolus_compact,
+                    subtitleCompact,
+                    compactChartBitmap
+                )
+                val regularViews = buildRemoteViews(
+                    R.layout.widget_easybolus,
+                    subtitleFull,
+                    regularChartBitmap
+                )
+
+                val finalViews = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    RemoteViews(
+                        mapOf(
+                            SizeF(180f, 40f) to compactViews,
+                            SizeF(180f, 95f) to regularViews
+                        )
+                    )
+                } else {
+                    val options = manager.getAppWidgetOptions(appWidgetId)
+                    val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+                    if (minH in 1..94) compactViews else regularViews
+                }
+                manager.updateAppWidget(appWidgetId, finalViews)
             }
         }
 
@@ -178,17 +245,19 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             readings: List<GlucoseReadingEntity>,
             settings: UserSettings,
             nowMillis: Long,
-            isDark: Boolean
+            isDark: Boolean,
+            width: Int,
+            height: Int,
+            compact: Boolean
         ): Bitmap {
-            val width = 420
-            val height = 220
             val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
 
-            val leftPad = 48f
-            val rightPad = 12f
-            val topPad = 14f
-            val bottomPad = 30f
+            // Keine Y-Achse -> maximale Breite ausnutzen
+            val leftPad = 4f
+            val rightPad = 4f
+            val topPad = if (compact) 6f else 10f
+            val bottomPad = if (compact) 22f else 28f
             val chartW = width - leftPad - rightPad
             val chartH = height - topPad - bottomPad
 
@@ -201,15 +270,11 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             val rawMaxMgDl = max(maxReadingMgDl, settings.targetRangeMax).toFloat()
 
             val bgMinDisplay = 0f
-            val bgMaxDisplay: Float
-            val bgStep: Int
-            if (unit == GlucoseUnit.MMOL_L) {
+            val bgMaxDisplay: Float = if (unit == GlucoseUnit.MMOL_L) {
                 val maxMmol = GlucoseFormatter.mgDlToMmol(rawMaxMgDl.toDouble()).toFloat()
-                bgMaxDisplay = max(15f, ceil((maxMmol + 1f) / 3f) * 3f)
-                bgStep = 3
+                max(15f, ceil((maxMmol + 1f) / 3f) * 3f)
             } else {
-                bgMaxDisplay = max(250f, ceil((rawMaxMgDl + 15f) / 50f) * 50f)
-                bgStep = 50
+                max(250f, ceil((rawMaxMgDl + 15f) / 50f) * 50f)
             }
 
             fun toDisplay(mgDl: Float): Float = when (unit) {
@@ -218,7 +283,8 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             }
 
             fun xFor(t: Long): Float = leftPad + ((t - startMs).toFloat() / spanMs) * chartW
-            fun yForDisplay(v: Float): Float = topPad + chartH - ((v - bgMinDisplay) / (bgMaxDisplay - bgMinDisplay)).coerceIn(0f, 1f) * chartH
+            fun yForDisplay(v: Float): Float =
+                topPad + chartH - ((v - bgMinDisplay) / (bgMaxDisplay - bgMinDisplay)).coerceIn(0f, 1f) * chartH
             fun yForMgDl(v: Float): Float = yForDisplay(toDisplay(v))
 
             val axisColor = if (isDark) 0xFF5F6368.toInt() else 0xFFDADCE0.toInt()
@@ -226,7 +292,7 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             val bandColor = if (isDark) 0x3300A884 else 0x3000A884
             val targetColor = if (isDark) 0xBBD0E8F2.toInt() else 0xAA0F4C5C.toInt()
 
-            // Zielbereich-Band
+            // Zielbereich-Band über die volle Breite
             val bandPaint = Paint().apply { color = bandColor }
             canvas.drawRect(
                 leftPad,
@@ -236,10 +302,10 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 bandPaint
             )
 
-            // Gestrichelte Zielwert-Linie
+            // Gestrichelte Zielwert-Linie über die volle Breite
             val targetPaint = Paint().apply {
                 color = targetColor
-                strokeWidth = 2.5f
+                strokeWidth = if (compact) 2f else 2.5f
                 style = Paint.Style.STROKE
                 isAntiAlias = true
                 pathEffect = DashPathEffect(floatArrayOf(10f, 8f), 0f)
@@ -247,30 +313,18 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             val targetY = yForMgDl(settings.targetBg.toFloat())
             canvas.drawLine(leftPad, targetY, leftPad + chartW, targetY, targetPaint)
 
-            // Achsen & Labels
+            // Nur X-Achse (keine Y-Achse)
             val axisPaint = Paint().apply {
                 color = axisColor
                 strokeWidth = 2f
                 isAntiAlias = true
             }
-            canvas.drawLine(leftPad, topPad, leftPad, topPad + chartH, axisPaint)
             canvas.drawLine(leftPad, topPad + chartH, leftPad + chartW, topPad + chartH, axisPaint)
-
-            val yLabelPaint = Paint().apply {
-                color = textColor
-                textSize = 18f
-                isAntiAlias = true
-                textAlign = Paint.Align.RIGHT
-            }
-            for (tick in bgStep..bgMaxDisplay.roundToInt() step bgStep) {
-                val y = yForDisplay(tick.toFloat())
-                canvas.drawText(tick.toString(), leftPad - 8f, y + 6f, yLabelPaint)
-            }
 
             // Volle Stunden auf X-Achse
             val xLabelPaint = Paint().apply {
                 color = textColor
-                textSize = 17f
+                textSize = if (compact) 16f else 18f
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
             }
@@ -284,13 +338,13 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             }
             while (cal.timeInMillis <= nowMillis) {
                 val x = xFor(cal.timeInMillis)
-                if (x >= leftPad + 22f && x <= leftPad + chartW - 22f) {
-                    canvas.drawText(hourFmt.format(Date(cal.timeInMillis)), x, height - 6f, xLabelPaint)
+                if (x >= leftPad + 24f && x <= leftPad + chartW - 24f) {
+                    canvas.drawText(hourFmt.format(Date(cal.timeInMillis)), x, height - 4f, xLabelPaint)
                 }
                 cal.add(Calendar.HOUR_OF_DAY, 1)
             }
 
-            // Glukose-Verlauf (feine Linie + farbige Punkte)
+            // Glukose-Verlauf (Linie + farbige Punkte)
             if (visible.size >= 2) {
                 val linePath = Path()
                 visible.forEachIndexed { idx, r ->
@@ -300,7 +354,7 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 }
                 val linePaint = Paint().apply {
                     color = COLOR_IN_RANGE
-                    strokeWidth = 4f
+                    strokeWidth = if (compact) 3.5f else 4f
                     style = Paint.Style.STROKE
                     isAntiAlias = true
                     strokeCap = Paint.Cap.ROUND
@@ -313,13 +367,14 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 isAntiAlias = true
                 style = Paint.Style.FILL
             }
+            val dotRadius = if (compact) 3.2f else 3.8f
             visible.forEach { r ->
                 dotPaint.color = when {
                     r.mgDl < settings.targetRangeMin -> COLOR_LOW
                     r.mgDl > settings.targetRangeMax -> COLOR_HIGH
                     else -> COLOR_IN_RANGE
                 }
-                canvas.drawCircle(xFor(r.timestampMillis), yForMgDl(r.mgDl.toFloat()), 3.5f, dotPaint)
+                canvas.drawCircle(xFor(r.timestampMillis), yForMgDl(r.mgDl.toFloat()), dotRadius, dotPaint)
             }
 
             return bmp

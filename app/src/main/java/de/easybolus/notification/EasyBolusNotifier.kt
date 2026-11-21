@@ -1,6 +1,7 @@
 package de.easybolus.notification
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -11,6 +12,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Build
 import android.widget.RemoteViews
@@ -36,7 +38,8 @@ import java.util.Locale
 
 object EasyBolusNotifier {
 
-    private const val CHANNEL_PERSISTENT = "easybolus_persistent_glucose"
+    private const val LEGACY_CHANNEL_PERSISTENT = "easybolus_persistent_glucose"
+    private const val CHANNEL_PERSISTENT = "easybolus_persistent_glucose_v2"
     private const val CHANNEL_CORRECTION = "easybolus_correction_alert"
     private const val NOTIF_ID_PERSISTENT = 1001
     private const val NOTIF_ID_CORRECTION = 1002
@@ -53,14 +56,20 @@ object EasyBolusNotifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // Alten IMPORTANCE_LOW-Kanal entfernen (Android blendet Low/Silent-Icons in der Statusleiste aus)
+        nm.deleteNotificationChannel(LEGACY_CHANNEL_PERSISTENT)
+
+        // IMPORTANCE_DEFAULT ohne Ton/Vibration -> zeigt den BZ-Wert dauerhaft in der Statusleiste
         val persistentChannel = NotificationChannel(
             CHANNEL_PERSISTENT,
             context.getString(R.string.notif_channel_persistent),
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             setShowBadge(false)
             enableVibration(false)
+            enableLights(false)
             setSound(null, null)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         val correctionChannel = NotificationChannel(
             CHANNEL_CORRECTION,
@@ -115,7 +124,7 @@ object EasyBolusNotifier {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
 
-        // 1. Dauerhafte Benachrichtigung (wie GlucoDataHandler)
+        // 1. Dauerhafte Benachrichtigung (wie GlucoDataHandler, mit Live-Wert in der Statusleiste)
         if (!settings.persistentNotificationEnabled || !hasPerm) {
             nm.cancel(NOTIF_ID_PERSISTENT)
         } else {
@@ -175,12 +184,15 @@ object EasyBolusNotifier {
 
             val notification = NotificationCompat.Builder(context, CHANNEL_PERSISTENT)
                 .setSmallIcon(smallIcon)
+                .setContentTitle("$bgText $trendText $deltaText".trim())
+                .setContentText(iobCobLine)
                 .setStyle(NotificationCompat.DecoratedCustomViewStyle())
                 .setCustomContentView(views)
                 .setCustomBigContentView(views)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setContentIntent(pi)
                 .setWhen(latest?.timestampMillis ?: now)
@@ -257,17 +269,24 @@ object EasyBolusNotifier {
         val paint = Paint().apply {
             color = Color.WHITE
             isAntiAlias = true
+            isSubpixelText = true
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
             textSize = when {
-                text.length <= 2 -> 64f
-                text.length == 3 -> 52f
-                else -> 42f
+                text.length <= 2 -> 80f
+                text.length == 3 -> 68f
+                else -> 54f
             }
         }
-        val fm = paint.fontMetrics
-        val baseline = size / 2f - (fm.ascent + fm.descent) / 2f
-        canvas.drawText(text, size / 2f, baseline, paint)
+        val bounds = Rect()
+        paint.getTextBounds(text, 0, text.length, bounds)
+        val maxWidth = size - 6f
+        if (bounds.width() > maxWidth && bounds.width() > 0) {
+            paint.textSize = paint.textSize * (maxWidth / bounds.width())
+            paint.getTextBounds(text, 0, text.length, bounds)
+        }
+        val y = size / 2f - bounds.exactCenterY()
+        canvas.drawText(text, size / 2f, y, paint)
         return bmp
     }
 }

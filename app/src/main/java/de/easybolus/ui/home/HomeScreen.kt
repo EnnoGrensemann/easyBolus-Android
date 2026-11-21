@@ -168,7 +168,7 @@ fun HomeScreen(
                         else -> stringResource(R.string.hours_ago, mins / 60L)
                     }
                     val deltaText = if (!isStaleCgm && uiState.latestDeltaMgDl != null) {
-                        "${GlucoseFormatter.formatSignedDelta(uiState.latestDeltaMgDl, unit, locale)} $unitText"
+                        "Δ ${GlucoseFormatter.formatSignedDelta(uiState.latestDeltaMgDl, unit, locale)}"
                     } else {
                         null
                     }

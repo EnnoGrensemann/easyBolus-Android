@@ -58,6 +58,11 @@ class MainActivity : ComponentActivity() {
             EasyBolusRoot(activity = this)
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        de.easybolus.notification.EasyBolusNotifier.refreshAllAsync(this)
+    }
 }
 
 @Composable
