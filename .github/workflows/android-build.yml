@@ -60,10 +60,16 @@ jobs:
           name: easyBOLUS-apk
           path: ${{ runner.temp }}/easyBOLUS.apk
 
+      - name: Read app versionName
+        id: version
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Publish GitHub Release (für Obtainium)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: easyBOLUS v1.0.${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.name }}
+          name: easyBOLUS v${{ steps.version.outputs.name }}
           make_latest: true
           files: ${{ runner.temp }}/easyBOLUS.apk
