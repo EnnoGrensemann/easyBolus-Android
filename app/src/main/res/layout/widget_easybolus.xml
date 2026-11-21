@@ -8,14 +8,14 @@
     android:gravity="center_vertical"
     android:paddingStart="12dp"
     android:paddingEnd="8dp"
-    android:paddingTop="10dp"
-    android:paddingBottom="10dp">
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
-    <!-- Linke Spalte: Live-BZ, Trend, Δ + Zeit, IOB & COB Pills (ohne Einheit) -->
+    <!-- Linke Spalte (4x2): Live-BZ, Trend, Δ + Zeit, IOB & COB Badges -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="0.95"
+        android:layout_weight="0.98"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -31,6 +31,7 @@
                 android:layout_height="wrap_content"
                 android:text="●"
                 android:textSize="13sp"
+                android:includeFontPadding="false"
                 android:textColor="#00A884"
                 android:layout_marginEnd="5dp" />
 
@@ -39,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="---"
-                android:textSize="36sp"
+                android:textSize="34sp"
                 android:textStyle="normal"
                 android:includeFontPadding="false"
                 android:fontFeatureSettings="tnum"
@@ -51,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text=""
-                android:textSize="24sp"
+                android:textSize="23sp"
                 android:includeFontPadding="false"
                 android:textColor="@color/widget_text_primary" />
         </LinearLayout>
@@ -61,31 +62,34 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="--"
-            android:textSize="11sp"
+            android:textSize="11.5sp"
+            android:includeFontPadding="false"
             android:maxLines="1"
             android:ellipsize="end"
             android:fontFeatureSettings="tnum"
             android:textColor="@color/widget_text_secondary"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="3dp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="7dp">
+            android:layout_marginTop="6dp">
 
             <TextView
                 android:id="@+id/widget_iob"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_iob"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingStart="9dp"
+                android:paddingEnd="9dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:includeFontPadding="false"
+                android:maxLines="1"
                 android:text="0,00 IE"
-                android:textSize="10.5sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />
@@ -95,13 +99,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_cob"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingStart="9dp"
+                android:paddingEnd="9dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
                 android:layout_marginStart="5dp"
+                android:includeFontPadding="false"
+                android:maxLines="1"
                 android:text="0,0 g"
-                android:textSize="10.5sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />

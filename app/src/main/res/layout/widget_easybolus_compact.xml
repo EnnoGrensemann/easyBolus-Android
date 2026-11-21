@@ -7,17 +7,17 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingStart="10dp"
-    android:paddingEnd="6dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:paddingEnd="8dp"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp">
 
-    <!-- Kompakte linke Spalte (4x1): zeigt ALLE Infos wie bei 4x2 (BZ, Trend, Δ + Zeit, IOB, COB) -->
+    <!-- Kompakte 4x1 linke Spalte (Pixel): Text höher gesetzt, große gut lesbare IOB & COB Badges -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1.05"
+        android:layout_weight="1.0"
         android:orientation="vertical"
-        android:gravity="center_vertical">
+        android:gravity="center_horizontal">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -30,7 +30,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="●"
-                android:textSize="10sp"
+                android:textSize="11sp"
+                android:includeFontPadding="false"
                 android:textColor="#00A884"
                 android:layout_marginEnd="4dp" />
 
@@ -39,8 +40,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="---"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textSize="27sp"
+                android:textStyle="normal"
                 android:includeFontPadding="false"
                 android:fontFeatureSettings="tnum"
                 android:textColor="@color/widget_text_primary" />
@@ -49,45 +50,46 @@
                 android:id="@+id/widget_trend"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
+                android:layout_marginStart="3dp"
                 android:text=""
-                android:textSize="16sp"
+                android:textSize="20sp"
                 android:includeFontPadding="false"
                 android:textColor="@color/widget_text_primary" />
-
-            <TextView
-                android:id="@+id/widget_subtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="--"
-                android:textSize="10sp"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:includeFontPadding="false"
-                android:fontFeatureSettings="tnum"
-                android:textColor="@color/widget_text_secondary" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textSize="11sp"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/widget_text_secondary"
+            android:layout_marginTop="2dp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="4dp">
+            android:gravity="center"
+            android:layout_marginTop="5dp">
 
             <TextView
                 android:id="@+id/widget_iob"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_iob"
-                android:paddingStart="7dp"
-                android:paddingEnd="7dp"
-                android:paddingTop="1dp"
-                android:paddingBottom="1dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
                 android:includeFontPadding="false"
+                android:maxLines="1"
                 android:text="0,00 IE"
-                android:textSize="9.5sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />
@@ -97,14 +99,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill_cob"
-                android:paddingStart="7dp"
-                android:paddingEnd="7dp"
-                android:paddingTop="1dp"
-                android:paddingBottom="1dp"
-                android:layout_marginStart="4dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:layout_marginStart="5dp"
                 android:includeFontPadding="false"
+                android:maxLines="1"
                 android:text="0,0 g"
-                android:textSize="9.5sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:textColor="#FFFFFF" />
@@ -115,19 +118,19 @@
     <ImageView
         android:layout_width="1dp"
         android:layout_height="match_parent"
-        android:layout_marginStart="5dp"
-        android:layout_marginEnd="5dp"
-        android:layout_marginTop="3dp"
-        android:layout_marginBottom="3dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
         android:background="@color/widget_divider"
         android:contentDescription="@null" />
 
-    <!-- Rechte Spalte: Volle Breite für Live-Mini-Chart ohne Y-Achse -->
+    <!-- Rechte Spalte: Maximale Breite für Live-Mini-Chart ohne Y-Achse -->
     <ImageView
         android:id="@+id/widget_chart_image"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1.35"
+        android:layout_weight="1.4"
         android:scaleType="fitXY"
         android:contentDescription="@string/app_name" />
 </LinearLayout>

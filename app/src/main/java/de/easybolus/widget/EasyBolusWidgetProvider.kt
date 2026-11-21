@@ -214,9 +214,14 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             }
 
             for (appWidgetId in widgetIds) {
+                val ultraCompactViews = buildRemoteViews(
+                    R.layout.widget_easybolus_ultra_compact,
+                    subtitleCompact,
+                    compactChartBitmap
+                )
                 val compactViews = buildRemoteViews(
                     R.layout.widget_easybolus_compact,
-                    subtitleCompact,
+                    subtitleFull,
                     compactChartBitmap
                 )
                 val regularViews = buildRemoteViews(
@@ -228,14 +233,19 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 val finalViews = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     RemoteViews(
                         mapOf(
-                            SizeF(180f, 40f) to compactViews,
-                            SizeF(180f, 95f) to regularViews
+                            SizeF(180f, 40f) to ultraCompactViews,
+                            SizeF(180f, 72f) to compactViews,
+                            SizeF(180f, 135f) to regularViews
                         )
                     )
                 } else {
                     val options = manager.getAppWidgetOptions(appWidgetId)
-                    val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-                    if (minH in 1..94) compactViews else regularViews
+                    val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
+                    when {
+                        minH in 1..71 -> ultraCompactViews
+                        minH in 72..134 -> compactViews
+                        else -> regularViews
+                    }
                 }
                 manager.updateAppWidget(appWidgetId, finalViews)
             }
