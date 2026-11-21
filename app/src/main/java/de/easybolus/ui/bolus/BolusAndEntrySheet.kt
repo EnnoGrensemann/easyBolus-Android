@@ -63,8 +63,7 @@ import de.easybolus.data.settings.UserSettings
 import de.easybolus.domain.BolusCalculator
 import de.easybolus.domain.CarbFactorFormatter
 import de.easybolus.domain.GlucoseFormatter
-import de.easybolus.ui.theme.BgHighOrange
-import de.easybolus.ui.theme.BgLowRed
+import de.easybolus.ui.theme.CobPillBg
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -429,11 +428,11 @@ private fun BolusCalculatorTab(
             }
 
             if (result.recommendedCarbsGrams > 0) {
-                val isLowNow = bgValMgDl < settings.targetRangeMin
-                val accentColor = if (isLowNow) BgLowRed else BgHighOrange
+                val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+                val textAccent = if (isDark) Color(0xFF9AC9A6) else Color(0xFF3E6347)
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
-                    color = accentColor.copy(alpha = 0.15f),
+                    color = CobPillBg.copy(alpha = 0.16f),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -447,7 +446,7 @@ private fun BolusCalculatorTab(
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
                                 text = stringResource(R.string.bolus_eat_carbs_title, result.recommendedCarbsGrams),
-                                color = accentColor,
+                                color = textAccent,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp
                             )
@@ -462,7 +461,7 @@ private fun BolusCalculatorTab(
                                 val updated = (carbsVal + result.recommendedCarbsGrams).roundToInt()
                                 carbsInput = updated.toString()
                             },
-                            color = accentColor,
+                            color = CobPillBg,
                             contentColor = Color.White,
                             shape = RoundedCornerShape(50)
                         ) {

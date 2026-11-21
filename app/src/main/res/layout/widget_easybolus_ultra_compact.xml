@@ -17,18 +17,18 @@
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="9dp"
+        android:paddingStart="8dp"
         android:paddingEnd="6dp"
         android:paddingTop="4dp"
         android:paddingBottom="4dp">
 
-        <!-- Ultra-kompakt (< 72dp Höhe): 2 Zeilen, alle Infos + große lesbare Badges -->
+        <!-- Ultra-kompakt (< 72dp Höhe): selbe Struktur wie 4x1, nur leicht kleiner skaliert -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1.05"
             android:orientation="vertical"
-            android:gravity="center_vertical">
+            android:gravity="center_horizontal">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -44,15 +44,15 @@
                     android:textSize="10sp"
                     android:includeFontPadding="false"
                     android:textColor="#00A884"
-                    android:layout_marginEnd="4dp" />
+                    android:layout_marginEnd="3dp" />
 
                 <TextView
                     android:id="@+id/widget_bg_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="---"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
+                    android:textSize="26sp"
+                    android:textStyle="normal"
                     android:includeFontPadding="false"
                     android:fontFeatureSettings="tnum"
                     android:textColor="@color/widget_text_primary" />
@@ -63,66 +63,70 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="2dp"
                     android:text=""
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:includeFontPadding="false"
                     android:textColor="@color/widget_text_primary" />
 
-                <TextView
-                    android:id="@+id/widget_subtitle"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:text="--"
-                    android:textSize="10sp"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:includeFontPadding="false"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="@color/widget_text_secondary" />
+                    android:layout_marginStart="6dp"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <TextView
+                        android:id="@+id/widget_iob"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="50dp"
+                        android:gravity="center"
+                        android:background="@drawable/widget_pill_iob"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0,00 IE"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold"
+                        android:fontFeatureSettings="tnum"
+                        android:textColor="#FFFFFF" />
+
+                    <TextView
+                        android:id="@+id/widget_cob"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="50dp"
+                        android:gravity="center"
+                        android:background="@drawable/widget_pill_cob"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:layout_marginTop="3dp"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0,0 g"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold"
+                        android:fontFeatureSettings="tnum"
+                        android:textColor="#FFFFFF" />
+                </LinearLayout>
             </LinearLayout>
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/widget_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="4dp">
-
-                <TextView
-                    android:id="@+id/widget_iob"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/widget_pill_iob"
-                    android:paddingStart="7dp"
-                    android:paddingEnd="7dp"
-                    android:paddingTop="2dp"
-                    android:paddingBottom="2dp"
-                    android:includeFontPadding="false"
-                    android:maxLines="1"
-                    android:text="0,00 IE"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="#FFFFFF" />
-
-                <TextView
-                    android:id="@+id/widget_cob"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/widget_pill_cob"
-                    android:paddingStart="7dp"
-                    android:paddingEnd="7dp"
-                    android:paddingTop="2dp"
-                    android:paddingBottom="2dp"
-                    android:layout_marginStart="4dp"
-                    android:includeFontPadding="false"
-                    android:maxLines="1"
-                    android:text="0,0 g"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="#FFFFFF" />
-            </LinearLayout>
+                android:text="--"
+                android:textSize="9.5sp"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:fontFeatureSettings="tnum"
+                android:textColor="@color/widget_text_secondary"
+                android:layout_marginTop="3dp" />
         </LinearLayout>
 
         <ImageView
@@ -139,7 +143,7 @@
             android:id="@+id/widget_chart_image"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1.35"
+            android:layout_weight="1.2"
             android:scaleType="fitXY"
             android:contentDescription="@string/app_name" />
     </LinearLayout>
