@@ -73,6 +73,7 @@ import kotlin.math.roundToInt
 fun BolusAndEntrySheet(
     currentBgMgDl: Int?,
     currentIob: Double,
+    currentCob: Double = 0.0,
     settings: UserSettings,
     onDismiss: () -> Unit,
     onSaveBolusAndCarbs: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?, timestampMillis: Long) -> Unit,
@@ -110,6 +111,7 @@ fun BolusAndEntrySheet(
                 BolusCalculatorTab(
                     initialBgMgDl = currentBgMgDl ?: settings.targetBg,
                     currentIob = currentIob,
+                    currentCob = currentCob,
                     settings = settings,
                     onSave = { bolus, carbs, note, bg ->
                         onSaveBolusAndCarbs(bolus, carbs, note, bg, System.currentTimeMillis())
@@ -255,6 +257,7 @@ private fun CarbQuickAddRow(
 private fun BolusCalculatorTab(
     initialBgMgDl: Int,
     currentIob: Double,
+    currentCob: Double,
     settings: UserSettings,
     onSave: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit
 ) {
@@ -283,7 +286,8 @@ private fun BolusCalculatorTab(
         carbsGrams = carbsVal,
         activeIob = currentIob,
         settings = settings,
-        hourOfDay = currentHour
+        hourOfDay = currentHour,
+        activeCob = currentCob
     )
 
     var manualOverride by remember(result.recommendedUnits) {
@@ -291,6 +295,8 @@ private fun BolusCalculatorTab(
     }
     var editingDoseInline by remember { mutableStateOf(false) }
     val activeBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
+    val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+    val cobTextColor = if (isDark) Color(0xFF9AC9A6) else Color(0xFF3E6347)
 
     // 1. Berechnungskarte OBEN (bleibt auch bei geöffneter Tastatur immer im Blick!)
     Card(
@@ -334,6 +340,29 @@ private fun BolusCalculatorTab(
                 value = -result.activeIob,
                 ieUnit = ieUnit
             )
+            if (currentCob > 0.0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.label_active_cob),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = String.format(locale, "%.1f g", currentCob),
+                        color = cobTextColor,
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = "tnum"
+                        )
+                    )
+                }
+            }
 
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
@@ -428,8 +457,6 @@ private fun BolusCalculatorTab(
             }
 
             if (result.recommendedCarbsGrams > 0) {
-                val isDark = MaterialTheme.colorScheme.background.red < 0.2f
-                val textAccent = if (isDark) Color(0xFF9AC9A6) else Color(0xFF3E6347)
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
                     color = CobPillBg.copy(alpha = 0.16f),
@@ -446,7 +473,7 @@ private fun BolusCalculatorTab(
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
                                 text = stringResource(R.string.bolus_eat_carbs_title, result.recommendedCarbsGrams),
-                                color = textAccent,
+                                color = cobTextColor,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp
                             )

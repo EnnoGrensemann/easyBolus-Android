@@ -197,6 +197,7 @@
     <string name="reports_readings_count">Readings</string>
 
     <!-- Bolus Carb Advice & Widget Transparency -->
+    <string name="label_active_cob">Active carbs (COB)</string>
     <string name="bolus_eat_carbs_title">Eat ≈ %1$d g carbs</string>
     <string name="bolus_eat_carbs_sub">To reach your target glucose</string>
     <string name="bolus_eat_carbs_apply">Apply</string>

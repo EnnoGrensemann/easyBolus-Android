@@ -10,6 +10,7 @@ data class BolusCalculationResult(
     val mealBolus: Double,
     val correctionBolus: Double,
     val activeIob: Double,
+    val activeCob: Double = 0.0,
     val rawTotal: Double,
     val recommendedUnits: Double,
     val recommendedCarbsGrams: Int = 0
@@ -21,16 +22,18 @@ object BolusCalculator {
      * Vereinfachter Pen-Bolusrechner:
      * - Feste oder stündliche Faktoren (KH-Faktor, ISF, Zielwert)
      * - Aktives IOB wird abgezogen
-     * - Kein COB-Abzug
+     * - Kein COB-Aufschlag auf den Insulin-Bolus (Sicherheit gegen Doppel-Bolus)
      * - Rundung auf Pen-Schrittweite (0,5 IE oder 1,0 IE)
-     * - Bei negativem Gesamtergebnis (niedriger BZ / Überschuss-IOB) Empfehlung zusätzlicher KH in Gramm
+     * - Bei negativem Gesamtergebnis (niedriger BZ / Überschuss-IOB) Empfehlung zusätzlicher KH
+     *   abzüglich bereits aktiver KH (COB)
      */
     fun calculate(
         currentBgMgDl: Int,
         carbsGrams: Double,
         activeIob: Double,
         settings: UserSettings,
-        hourOfDay: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        hourOfDay: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+        activeCob: Double = 0.0
     ): BolusCalculationResult {
         val activeCarbRatio = settings.carbRatioForHour(hourOfDay)
         val mealBolus = if (carbsGrams > 0.0 && activeCarbRatio > 0.0) {
@@ -49,11 +52,13 @@ object BolusCalculator {
         val rawTotal = max(0.0, signedTotal)
         val recommended = roundToPenStep(rawTotal, settings.penStepSize)
 
+        val safeCob = activeCob.coerceAtLeast(0.0)
         val recommendedCarbsGrams = if (signedTotal < 0.0 && activeCarbRatio > 0.0) {
-            val neededGrams = -signedTotal * activeCarbRatio
-            val shouldSuggest = neededGrams >= 3.0 ||
-                (currentBgMgDl < settings.targetRangeMin && neededGrams >= 1.0)
-            if (shouldSuggest) neededGrams.roundToInt().coerceAtLeast(1) else 0
+            val rawNeededGrams = -signedTotal * activeCarbRatio
+            val netNeededGrams = (rawNeededGrams - safeCob).coerceAtLeast(0.0)
+            val shouldSuggest = netNeededGrams >= 3.0 ||
+                (currentBgMgDl < settings.targetRangeMin && netNeededGrams >= 1.0)
+            if (shouldSuggest) netNeededGrams.roundToInt().coerceAtLeast(1) else 0
         } else {
             0
         }
@@ -62,6 +67,7 @@ object BolusCalculator {
             mealBolus = mealBolus,
             correctionBolus = correctionBolus,
             activeIob = activeIob,
+            activeCob = safeCob,
             rawTotal = rawTotal,
             recommendedUnits = recommended,
             recommendedCarbsGrams = recommendedCarbsGrams

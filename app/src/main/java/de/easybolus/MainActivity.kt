@@ -200,6 +200,7 @@ private fun EasyBolusRoot(
             BolusAndEntrySheet(
                 currentBgMgDl = homeState.latestGlucose?.mgDl,
                 currentIob = homeState.currentIob,
+                currentCob = homeState.currentCob,
                 settings = settings,
                 onDismiss = { showBolusSheet = false },
                 onSaveBolusAndCarbs = { bolus, carbs, note, bg, timestampMillis ->

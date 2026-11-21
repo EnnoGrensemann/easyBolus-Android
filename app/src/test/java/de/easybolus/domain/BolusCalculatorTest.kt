@@ -125,4 +125,46 @@ class BolusCalculatorTest {
         )
         assertEquals(0, tinyNoise.recommendedCarbsGrams)
     }
+
+    @Test
+    fun subtractsActiveCobFromRecommendedCarbsWithoutAffectingBolus() {
+        // IOB 3.66 IE bei BZ 100 / Ziel 110 / ISF 40 / 12.5 g/IE -> ohne COB ~49 g, mit 57.6 g COB -> 0 g
+        val mealSettings = defaultSettings.copy(carbRatio = 12.5, targetBg = 110)
+        val coveredByCob = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 0.0,
+            activeIob = 3.66,
+            settings = mealSettings,
+            activeCob = 57.6
+        )
+        assertEquals(0.0, coveredByCob.recommendedUnits, 0.001)
+        assertEquals(0, coveredByCob.recommendedCarbsGrams)
+
+        // IOB 2.0 IE -> 20 g Bedarf minus 8 g COB = 12 g KH
+        val partialCob = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 0.0,
+            activeIob = 2.0,
+            settings = defaultSettings,
+            activeCob = 8.0
+        )
+        assertEquals(12, partialCob.recommendedCarbsGrams)
+
+        // COB erhöht niemals den Insulin-Bolus
+        val highBgNoCob = BolusCalculator.calculate(
+            currentBgMgDl = 180,
+            carbsGrams = 0.0,
+            activeIob = 0.0,
+            settings = defaultSettings,
+            activeCob = 0.0
+        )
+        val highBgWithCob = BolusCalculator.calculate(
+            currentBgMgDl = 180,
+            carbsGrams = 0.0,
+            activeIob = 0.0,
+            settings = defaultSettings,
+            activeCob = 50.0
+        )
+        assertEquals(highBgNoCob.recommendedUnits, highBgWithCob.recommendedUnits, 0.001)
+    }
 }

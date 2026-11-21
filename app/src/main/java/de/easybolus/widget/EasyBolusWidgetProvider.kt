@@ -12,6 +12,7 @@ import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
@@ -36,6 +37,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 class EasyBolusWidgetProvider : AppWidgetProvider() {
 
@@ -171,25 +173,6 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
 
-            val regularChartBitmap = renderMiniChartBitmap(
-                readings = readings,
-                settings = settings,
-                nowMillis = now,
-                isDark = isNight,
-                width = 560,
-                height = 220,
-                compact = false
-            )
-            val compactChartBitmap = renderMiniChartBitmap(
-                readings = readings,
-                settings = settings,
-                nowMillis = now,
-                isDark = isNight,
-                width = 560,
-                height = 130,
-                compact = true
-            )
-
             val launchIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -218,20 +201,62 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             }
 
             for (appWidgetId in widgetIds) {
+                val options = manager.getAppWidgetOptions(appWidgetId)
+                val widgetW = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 340)
+                    .takeIf { it > 0 } ?: 340
+                val widgetH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 92)
+                    .takeIf { it > 0 } ?: 92
+
+                val chartWidthDp = ((widgetW - 31f) * (1.25f / 2.30f)).coerceIn(115f, 320f)
+                val bmpWidth = 520
+
+                val ultraHeightDp = (if (widgetH in 40..71) widgetH else 56) - 8f
+                val compactHeightDp = (if (widgetH in 72..134) widgetH else 92) - 10f
+                val regularHeightDp = (if (widgetH >= 135) widgetH else 175) - 16f
+
+                val ultraBmpH = (bmpWidth * (ultraHeightDp / chartWidthDp)).roundToInt().coerceIn(135, 220)
+                val compactBmpH = (bmpWidth * (compactHeightDp / chartWidthDp)).roundToInt().coerceIn(210, 320)
+                val regularBmpH = (bmpWidth * (regularHeightDp / chartWidthDp)).roundToInt().coerceIn(330, 500)
+
+                val ultraChart = renderMiniChartBitmap(
+                    readings = readings,
+                    settings = settings,
+                    nowMillis = now,
+                    isDark = isNight,
+                    width = bmpWidth,
+                    height = ultraBmpH
+                )
+                val compactChart = renderMiniChartBitmap(
+                    readings = readings,
+                    settings = settings,
+                    nowMillis = now,
+                    isDark = isNight,
+                    width = bmpWidth,
+                    height = compactBmpH
+                )
+                val regularChart = renderMiniChartBitmap(
+                    readings = readings,
+                    settings = settings,
+                    nowMillis = now,
+                    isDark = isNight,
+                    width = bmpWidth,
+                    height = regularBmpH
+                )
+
                 val ultraCompactViews = buildRemoteViews(
                     R.layout.widget_easybolus_ultra_compact,
                     subtitleCompact,
-                    compactChartBitmap
+                    ultraChart
                 )
                 val compactViews = buildRemoteViews(
                     R.layout.widget_easybolus_compact,
                     subtitleFull,
-                    compactChartBitmap
+                    compactChart
                 )
                 val regularViews = buildRemoteViews(
                     R.layout.widget_easybolus,
                     subtitleFull,
-                    regularChartBitmap
+                    regularChart
                 )
 
                 val finalViews = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -243,11 +268,9 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                         )
                     )
                 } else {
-                    val options = manager.getAppWidgetOptions(appWidgetId)
-                    val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
                     when {
-                        minH in 1..71 -> ultraCompactViews
-                        minH in 72..134 -> compactViews
+                        widgetH in 1..71 -> ultraCompactViews
+                        widgetH in 72..134 -> compactViews
                         else -> regularViews
                     }
                 }
@@ -261,19 +284,20 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             nowMillis: Long,
             isDark: Boolean,
             width: Int,
-            height: Int,
-            compact: Boolean
+            height: Int
         ): Bitmap {
             val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
 
-            // Keine Y-Achse -> maximale Breite ausnutzen
-            val leftPad = 4f
-            val rightPad = 4f
-            val topPad = if (compact) 6f else 10f
-            val bottomPad = if (compact) 22f else 28f
+            // Proportionale, unverzerrte Ränder & Schrift (fitCenter)
+            val leftPad = 6f
+            val rightPad = 6f
+            val topPad = 10f
+            val labelSize = 24f
+            val bottomPad = 38f
             val chartW = width - leftPad - rightPad
-            val chartH = height - topPad - bottomPad
+            val chartH = (height - topPad - bottomPad).coerceAtLeast(40f)
+            val axisY = topPad + chartH
 
             val spanMs = 5L * 3600_000L
             val startMs = nowMillis - spanMs
@@ -301,8 +325,8 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 topPad + chartH - ((v - bgMinDisplay) / (bgMaxDisplay - bgMinDisplay)).coerceIn(0f, 1f) * chartH
             fun yForMgDl(v: Float): Float = yForDisplay(toDisplay(v))
 
-            val axisColor = if (isDark) 0xFF5F6368.toInt() else 0xFFDADCE0.toInt()
-            val textColor = if (isDark) 0xFF9AA0A6.toInt() else 0xFF5F6368.toInt()
+            val axisColor = if (isDark) 0x66FFFFFF else 0x33000000
+            val textColor = if (isDark) 0xCCFFFFFF.toInt() else 0x991F1F1F.toInt()
             val bandColor = if (isDark) 0x3300A884 else 0x3000A884
             val targetColor = if (isDark) 0xBBD0E8F2.toInt() else 0xAA0F4C5C.toInt()
 
@@ -319,27 +343,28 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             // Gestrichelte Zielwert-Linie über die volle Breite
             val targetPaint = Paint().apply {
                 color = targetColor
-                strokeWidth = if (compact) 2f else 2.5f
+                strokeWidth = 2.5f
                 style = Paint.Style.STROKE
                 isAntiAlias = true
-                pathEffect = DashPathEffect(floatArrayOf(10f, 8f), 0f)
+                pathEffect = DashPathEffect(floatArrayOf(12f, 9f), 0f)
             }
             val targetY = yForMgDl(settings.targetBg.toFloat())
             canvas.drawLine(leftPad, targetY, leftPad + chartW, targetY, targetPaint)
 
-            // Nur X-Achse (keine Y-Achse)
+            // Klare, scharfe X-Achse + dezente Stunden-Ticks
             val axisPaint = Paint().apply {
                 color = axisColor
                 strokeWidth = 2f
                 isAntiAlias = true
             }
-            canvas.drawLine(leftPad, topPad + chartH, leftPad + chartW, topPad + chartH, axisPaint)
+            canvas.drawLine(leftPad, axisY, leftPad + chartW, axisY, axisPaint)
 
-            // Volle Stunden auf X-Achse
             val xLabelPaint = Paint().apply {
                 color = textColor
-                textSize = if (compact) 16f else 18f
+                textSize = labelSize
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
                 isAntiAlias = true
+                isSubpixelText = true
                 textAlign = Paint.Align.CENTER
             }
             val hourFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -352,8 +377,9 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
             }
             while (cal.timeInMillis <= nowMillis) {
                 val x = xFor(cal.timeInMillis)
-                if (x >= leftPad + 24f && x <= leftPad + chartW - 24f) {
-                    canvas.drawText(hourFmt.format(Date(cal.timeInMillis)), x, height - 4f, xLabelPaint)
+                if (x >= leftPad + 34f && x <= leftPad + chartW - 34f) {
+                    canvas.drawLine(x, axisY, x, axisY + 5f, axisPaint)
+                    canvas.drawText(hourFmt.format(Date(cal.timeInMillis)), x, height - 6f, xLabelPaint)
                 }
                 cal.add(Calendar.HOUR_OF_DAY, 1)
             }
@@ -368,7 +394,7 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 }
                 val linePaint = Paint().apply {
                     color = COLOR_IN_RANGE
-                    strokeWidth = if (compact) 3.5f else 4f
+                    strokeWidth = 5f
                     style = Paint.Style.STROKE
                     isAntiAlias = true
                     strokeCap = Paint.Cap.ROUND
@@ -381,14 +407,13 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 isAntiAlias = true
                 style = Paint.Style.FILL
             }
-            val dotRadius = if (compact) 3.2f else 3.8f
             visible.forEach { r ->
                 dotPaint.color = when {
                     r.mgDl < settings.targetRangeMin -> COLOR_LOW
                     r.mgDl > settings.targetRangeMax -> COLOR_HIGH
                     else -> COLOR_IN_RANGE
                 }
-                canvas.drawCircle(xFor(r.timestampMillis), yForMgDl(r.mgDl.toFloat()), dotRadius, dotPaint)
+                canvas.drawCircle(xFor(r.timestampMillis), yForMgDl(r.mgDl.toFloat()), 4.5f, dotPaint)
             }
 
             return bmp
