@@ -195,4 +195,10 @@
     <string name="reports_bolus_day">Avg Bolus/day</string>
     <string name="reports_carbs_day">Avg Carbs/day</string>
     <string name="reports_readings_count">Readings</string>
+
+    <!-- Bolus Carb Advice & Widget Transparency -->
+    <string name="bolus_eat_carbs_title">Eat ≈ %1$d g carbs</string>
+    <string name="bolus_eat_carbs_sub">To reach your target glucose</string>
+    <string name="bolus_eat_carbs_apply">Apply</string>
+    <string name="settings_widget_transparency">Widget transparency: %1$d%%</string>
 </resources>

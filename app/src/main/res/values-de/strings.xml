@@ -195,4 +195,10 @@
     <string name="reports_bolus_day">Ø Bolus/Tag</string>
     <string name="reports_carbs_day">Ø KH/Tag</string>
     <string name="reports_readings_count">Messwerte</string>
+
+    <!-- Bolus Carb Advice & Widget Transparency -->
+    <string name="bolus_eat_carbs_title">≈ %1$d g KH essen</string>
+    <string name="bolus_eat_carbs_sub">Um den Zielwert zu erreichen</string>
+    <string name="bolus_eat_carbs_apply">Übernehmen</string>
+    <string name="settings_widget_transparency">Widget-Transparenz: %1$d %%</string>
 </resources>

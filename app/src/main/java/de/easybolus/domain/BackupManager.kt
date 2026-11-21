@@ -159,6 +159,7 @@ object BackupManager {
         put("correctionAlertEnabled", s.correctionAlertEnabled)
         put("correctionAlertMinUnits", s.correctionAlertMinUnits)
         put("correctionAlertWaitMinutes", s.correctionAlertWaitMinutes)
+        put("widgetTransparencyPercent", s.widgetTransparencyPercent)
     }
 
     private fun jsonToSettings(obj: JSONObject): UserSettings {
@@ -193,7 +194,8 @@ object BackupManager {
             persistentNotificationEnabled = obj.optBoolean("persistentNotificationEnabled", false),
             correctionAlertEnabled = obj.optBoolean("correctionAlertEnabled", false),
             correctionAlertMinUnits = obj.optDouble("correctionAlertMinUnits", 1.5).coerceIn(0.5, 20.0),
-            correctionAlertWaitMinutes = obj.optInt("correctionAlertWaitMinutes", 20).coerceIn(1, 180)
+            correctionAlertWaitMinutes = obj.optInt("correctionAlertWaitMinutes", 20).coerceIn(1, 180),
+            widgetTransparencyPercent = obj.optInt("widgetTransparencyPercent", 0).coerceIn(0, 100)
         )
     }
 }

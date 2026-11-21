@@ -85,4 +85,44 @@ class BolusCalculatorTest {
         assertEquals(3.0, afternoon.mealBolus, 0.001)
         assertEquals(3.0, afternoon.recommendedUnits, 0.001)
     }
+
+    @Test
+    fun recommendsCarbsWhenBgIsLowOrIobExceedsNeed() {
+        // BZ 70, Ziel 100, ISF 40 -> -0.75 IE * 10 g/IE = 7.5 -> 8 g KH
+        val lowBg = BolusCalculator.calculate(
+            currentBgMgDl = 70,
+            carbsGrams = 0.0,
+            activeIob = 0.0,
+            settings = defaultSettings
+        )
+        assertEquals(0.0, lowBg.recommendedUnits, 0.001)
+        assertEquals(8, lowBg.recommendedCarbsGrams)
+
+        // BZ 100, IOB 2.0 -> -2.0 IE * 10 g/IE = 20 g KH
+        val excessIob = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 0.0,
+            activeIob = 2.0,
+            settings = defaultSettings
+        )
+        assertEquals(20, excessIob.recommendedCarbsGrams)
+
+        // Bereits 15 g KH eingegeben -> noch 5 g KH nötig
+        val partiallyCovered = BolusCalculator.calculate(
+            currentBgMgDl = 100,
+            carbsGrams = 15.0,
+            activeIob = 2.0,
+            settings = defaultSettings
+        )
+        assertEquals(5, partiallyCovered.recommendedCarbsGrams)
+
+        // Minimales Rauschen im Zielbereich (98 bei Ziel 100 -> 0.5 g) -> keine Empfehlung
+        val tinyNoise = BolusCalculator.calculate(
+            currentBgMgDl = 98,
+            carbsGrams = 0.0,
+            activeIob = 0.0,
+            settings = defaultSettings
+        )
+        assertEquals(0, tinyNoise.recommendedCarbsGrams)
+    }
 }

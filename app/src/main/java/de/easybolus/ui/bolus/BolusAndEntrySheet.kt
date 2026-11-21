@@ -63,8 +63,11 @@ import de.easybolus.data.settings.UserSettings
 import de.easybolus.domain.BolusCalculator
 import de.easybolus.domain.CarbFactorFormatter
 import de.easybolus.domain.GlucoseFormatter
+import de.easybolus.ui.theme.BgHighOrange
+import de.easybolus.ui.theme.BgLowRed
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -421,6 +424,55 @@ private fun BolusCalculatorTab(
                             contentDescription = "+",
                             modifier = Modifier.size(22.dp)
                         )
+                    }
+                }
+            }
+
+            if (result.recommendedCarbsGrams > 0) {
+                val isLowNow = bgValMgDl < settings.targetRangeMin
+                val accentColor = if (isLowNow) BgLowRed else BgHighOrange
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = accentColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(
+                                text = stringResource(R.string.bolus_eat_carbs_title, result.recommendedCarbsGrams),
+                                color = accentColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = stringResource(R.string.bolus_eat_carbs_sub),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Surface(
+                            onClick = {
+                                val updated = (carbsVal + result.recommendedCarbsGrams).roundToInt()
+                                carbsInput = updated.toString()
+                            },
+                            color = accentColor,
+                            contentColor = Color.White,
+                            shape = RoundedCornerShape(50)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.bolus_eat_carbs_apply),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
                     }
                 }
             }

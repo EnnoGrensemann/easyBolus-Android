@@ -200,9 +200,13 @@ class EasyBolusWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            val bgAlpha = ((100 - settings.widgetTransparencyPercent.coerceIn(0, 100)) * 255 / 100)
+                .coerceIn(0, 255)
+
             fun buildRemoteViews(layoutRes: Int, subtitle: String, chart: Bitmap): RemoteViews {
                 return RemoteViews(context.packageName, layoutRes).apply {
                     setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+                    setInt(R.id.widget_bg_image, "setImageAlpha", bgAlpha)
                     setTextViewText(R.id.widget_bg_value, bgText)
                     setTextViewText(R.id.widget_trend, trendText)
                     setTextColor(R.id.widget_status_dot, dotColor)

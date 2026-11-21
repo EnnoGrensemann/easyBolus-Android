@@ -35,12 +35,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +70,7 @@ import de.easybolus.ui.theme.BgInRangeGreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
@@ -87,6 +90,7 @@ fun SettingsScreen(
 
     var glucoseUnit by remember(settings) { mutableStateOf(settings.glucoseUnit) }
     var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
+    var widgetTransparency by remember(settings) { mutableIntStateOf(settings.widgetTransparencyPercent) }
     var jugglucoEnabled by remember(settings) { mutableStateOf(settings.jugglucoEnabled) }
 
     var carbFactorMode by remember(settings) { mutableStateOf(settings.carbFactorMode) }
@@ -196,7 +200,8 @@ fun SettingsScreen(
             persistentNotificationEnabled = persistentNotificationEnabled,
             correctionAlertEnabled = correctionAlertEnabled,
             correctionAlertMinUnits = parsedCorrMin,
-            correctionAlertWaitMinutes = parsedCorrWait
+            correctionAlertWaitMinutes = parsedCorrWait,
+            widgetTransparencyPercent = widgetTransparency
         )
     }
 
@@ -371,6 +376,21 @@ fun SettingsScreen(
                             )
                         }
                     }
+
+                    Text(
+                        text = stringResource(R.string.settings_widget_transparency, widgetTransparency),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
+                    Slider(
+                        value = widgetTransparency.toFloat(),
+                        onValueChange = { raw ->
+                            widgetTransparency = ((raw / 5f).roundToInt() * 5).coerceIn(0, 100)
+                        },
+                        valueRange = 0f..100f,
+                        steps = 19,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
