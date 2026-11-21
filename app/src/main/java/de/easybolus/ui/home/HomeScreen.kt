@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.AlertDialog
@@ -65,6 +66,7 @@ import kotlin.math.roundToInt
 fun HomeScreen(
     uiState: HomeUiState,
     onSaveManualGlucose: (mgDl: Int) -> Unit,
+    onOpenReports: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
@@ -241,14 +243,14 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 3. Dual-Axis Chart endet sauber mit Abstand oberhalb des Extended FAB
+        // 3. Dual-Axis Chart
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(18.dp),
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, bottom = 84.dp)
+                .padding(horizontal = 12.dp)
         ) {
             if (uiState.chartReadings.isEmpty() && uiState.chartEntries.isEmpty()) {
                 Box(
@@ -276,6 +278,43 @@ fun HomeScreen(
                         .fillMaxSize()
                         .padding(horizontal = 4.dp, vertical = 4.dp)
                 )
+            }
+        }
+
+        // 4. Untere Aktionsleiste unter dem Chart: "Berichte"-Button links auf Höhe des "+ Eintrag"-FAB rechts
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(84.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Surface(
+                onClick = onOpenReports,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 2.dp,
+                modifier = Modifier.height(54.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 18.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.btn_reports),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

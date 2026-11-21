@@ -79,10 +79,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val allDiaryEntries: StateFlow<List<DiaryEntryEntity>> = dao.observeAllDiaryEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val reportReadings90d: StateFlow<List<GlucoseReadingEntity>> = dao.observeGlucoseSince(sinceMillis)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val homeUiState: StateFlow<HomeUiState> = combine(
         dao.observeLatestGlucose(),
-        dao.observeGlucoseSince(sinceMillis),
-        dao.observeAllDiaryEntries(),
+        reportReadings90d,
+        allDiaryEntries,
         settingsRepo.settingsFlow,
         tickerFlow
     ) { latest, readings, entries, settings, now ->
@@ -234,6 +237,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     source = "Manual"
                 )
             )
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = true)
         }
     }
 
@@ -280,6 +284,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         trendAtTime = trend
                     )
                 )
+                de.easybolus.notification.EasyBolusNotifier.resetCorrectionTimerOnBolus(getApplication())
             }
             if (carbsGrams > 0.0) {
                 dao.insertDiaryEntry(
@@ -293,6 +298,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
             }
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 
@@ -322,24 +328,68 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     trendAtTime = matchedReading?.trendArrow
                 )
             )
+            if ((bolusUnits ?: 0.0) > 0.0) {
+                de.easybolus.notification.EasyBolusNotifier.resetCorrectionTimerOnBolus(getApplication())
+            }
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 
     fun updateDiaryEntry(entry: DiaryEntryEntity) {
         viewModelScope.launch {
             dao.updateDiaryEntry(entry)
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 
     fun deleteDiaryEntry(entry: DiaryEntryEntity) {
         viewModelScope.launch {
             dao.deleteDiaryEntry(entry)
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 
     fun updateSettings(newSettings: UserSettings) {
         viewModelScope.launch {
             settingsRepo.updateSettings(newSettings)
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
+        }
+    }
+
+    fun exportAllDataCsv(onReady: (List<GlucoseReadingEntity>, List<DiaryEntryEntity>) -> Unit) {
+        viewModelScope.launch {
+            val readings = dao.getAllGlucoseReadings()
+            val entries = dao.getAllDiaryEntries()
+            onReady(readings, entries)
+        }
+    }
+
+    fun buildFullBackupJson(onReady: (String) -> Unit) {
+        viewModelScope.launch {
+            val currentSettings = settingsRepo.getCurrentSettings()
+            val readings = dao.getAllGlucoseReadings()
+            val entries = dao.getAllDiaryEntries()
+            val json = de.easybolus.domain.BackupManager.serializeFullBackup(currentSettings, readings, entries)
+            onReady(json)
+        }
+    }
+
+    fun restoreFullBackupJson(json: String, onResult: (Boolean, Int, Int) -> Unit) {
+        viewModelScope.launch {
+            val payload = de.easybolus.domain.BackupManager.deserializeFullBackup(json)
+            if (payload == null) {
+                onResult(false, 0, 0)
+                return@launch
+            }
+            payload.settings?.let { settingsRepo.updateSettings(it) }
+            if (payload.readings.isNotEmpty()) {
+                dao.insertGlucoseReadings(payload.readings)
+            }
+            if (payload.entries.isNotEmpty()) {
+                dao.insertDiaryEntries(payload.entries)
+            }
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
+            onResult(true, payload.readings.size, payload.entries.size)
         }
     }
 
@@ -408,6 +458,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     trendAtTime = TrendArrow.UP_RIGHT
                 )
             )
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 
@@ -415,6 +466,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dao.clearDemoGlucose()
             dao.clearDemoDiary()
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
         }
     }
 }

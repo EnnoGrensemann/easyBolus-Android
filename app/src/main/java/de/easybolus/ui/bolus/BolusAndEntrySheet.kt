@@ -57,9 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.easybolus.R
 import de.easybolus.data.local.DiaryEntryType
+import de.easybolus.data.settings.CarbFactorMode
 import de.easybolus.data.settings.GlucoseUnit
 import de.easybolus.data.settings.UserSettings
 import de.easybolus.domain.BolusCalculator
+import de.easybolus.domain.CarbFactorFormatter
 import de.easybolus.domain.GlucoseFormatter
 import java.util.Calendar
 import java.util.Locale
@@ -115,6 +117,7 @@ fun BolusAndEntrySheet(
             } else {
                 QuickEntryTab(
                     glucoseUnit = settings.glucoseUnit,
+                    defaultBasalUnits = settings.defaultBasalUnits,
                     onSave = { type, bolus, carbs, basal, note, timestampMillis ->
                         onAddQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
                         onDismiss()
@@ -192,7 +195,7 @@ private fun SoftFilledTextField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 12.sp) },
+        label = { Text(label, fontSize = 12.sp, maxLines = 1) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         singleLine = singleLine,
         shape = RoundedCornerShape(16.dp),
@@ -266,6 +269,12 @@ private fun BolusCalculatorTab(
     val carbsVal = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
     val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val activeCarbRatio = settings.carbRatioForHour(currentHour)
+    val factorDisplay = CarbFactorFormatter.formatDisplay(activeCarbRatio, settings.carbFactorMode, locale)
+    val factorUnitSuffix = when (settings.carbFactorMode) {
+        CarbFactorMode.GRAMS_PER_IE -> stringResource(R.string.factor_mode_g_per_ie)
+        CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
+        CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
+    }
 
     val result = BolusCalculator.calculate(
         currentBgMgDl = bgValMgDl,
@@ -281,35 +290,7 @@ private fun BolusCalculatorTab(
     var editingDoseInline by remember { mutableStateOf(false) }
     val activeBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
 
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        SoftFilledTextField(
-            value = bgInput,
-            onValueChange = { bgInput = it },
-            label = stringResource(R.string.label_bg_unit, unitLabel),
-            keyboardType = if (unit == GlucoseUnit.MG_DL) KeyboardType.Number else KeyboardType.Decimal,
-            modifier = Modifier.weight(1f)
-        )
-        SoftFilledTextField(
-            value = carbsInput,
-            onValueChange = { carbsInput = it },
-            label = stringResource(R.string.label_carbs_g),
-            keyboardType = KeyboardType.Decimal,
-            modifier = Modifier.weight(1f)
-        )
-    }
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    CarbQuickAddRow(
-        onAddGrams = { addGrams ->
-            val updated = (carbsVal + addGrams).toInt()
-            carbsInput = updated.toString()
-        }
-    )
-
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // Google Material You Tonal-Ergebniskarte mit integriertem − / + Stepper
+    // 1. Berechnungskarte OBEN (bleibt auch bei geöffneter Tastatur immer im Blick!)
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
@@ -320,12 +301,7 @@ private fun BolusCalculatorTab(
         Column(modifier = Modifier.padding(16.dp)) {
             if (settings.useHourlyCarbRatio) {
                 Text(
-                    text = stringResource(
-                        R.string.label_hourly_active,
-                        currentHour,
-                        String.format(locale, "%.1f", activeCarbRatio),
-                        ieUnit
-                    ),
+                    text = String.format(locale, "%02d:00 · %s %s", currentHour, factorDisplay, factorUnitSuffix),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -336,7 +312,7 @@ private fun BolusCalculatorTab(
                 label = stringResource(
                     R.string.label_meal_bolus,
                     carbsVal.toInt(),
-                    String.format(locale, "%.1f", activeCarbRatio)
+                    "$factorDisplay $factorUnitSuffix"
                 ),
                 value = result.mealBolus,
                 ieUnit = ieUnit
@@ -451,6 +427,43 @@ private fun BolusCalculatorTab(
         }
     }
 
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // 2. Eingabefelder UNTER dem Berechnungsteil (bei aktiver Sensor-Anbindung BZ kompakter, KH größer)
+    val bgWeight = if (settings.jugglucoEnabled) 0.36f else 0.5f
+    val carbsWeight = if (settings.jugglucoEnabled) 0.64f else 0.5f
+    val bgLabel = if (settings.jugglucoEnabled) {
+        "${stringResource(R.string.mode_bg)} ($unitLabel)"
+    } else {
+        stringResource(R.string.label_bg_unit, unitLabel)
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        SoftFilledTextField(
+            value = bgInput,
+            onValueChange = { bgInput = it },
+            label = bgLabel,
+            keyboardType = if (unit == GlucoseUnit.MG_DL) KeyboardType.Number else KeyboardType.Decimal,
+            modifier = Modifier.weight(bgWeight)
+        )
+        SoftFilledTextField(
+            value = carbsInput,
+            onValueChange = { carbsInput = it },
+            label = stringResource(R.string.label_carbs_g),
+            keyboardType = KeyboardType.Decimal,
+            modifier = Modifier.weight(carbsWeight)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    CarbQuickAddRow(
+        onAddGrams = { addGrams ->
+            val updated = (carbsVal + addGrams).toInt()
+            carbsInput = updated.toString()
+        }
+    )
+
     Spacer(modifier = Modifier.height(12.dp))
 
     SoftFilledTextField(
@@ -512,6 +525,7 @@ private enum class QuickEntryMode {
 @Composable
 private fun QuickEntryTab(
     glucoseUnit: GlucoseUnit,
+    defaultBasalUnits: Double,
     onSave: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit,
     onSaveCombo: (bolus: Double, carbs: Double, note: String?, timestampMillis: Long) -> Unit,
     onSaveGlucose: (mgDl: Int, timestampMillis: Long) -> Unit
@@ -570,7 +584,12 @@ private fun QuickEntryTab(
                     .clip(RoundedCornerShape(50))
                     .clickable {
                         selectedMode = mode
-                        valueInput = ""
+                        valueInput = if (mode == QuickEntryMode.BASAL && defaultBasalUnits > 0.0) {
+                            if (defaultBasalUnits % 1.0 == 0.0) defaultBasalUnits.toInt().toString()
+                            else String.format(Locale.US, "%.1f", defaultBasalUnits)
+                        } else {
+                            ""
+                        }
                         carbsInput = ""
                         bolusInput = ""
                     }

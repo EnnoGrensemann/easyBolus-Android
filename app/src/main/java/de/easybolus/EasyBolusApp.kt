@@ -5,6 +5,7 @@ import android.content.IntentFilter
 import android.os.Build
 import de.easybolus.data.juggluco.JugglucoBroadcastParser
 import de.easybolus.data.juggluco.JugglucoBroadcastReceiver
+import de.easybolus.notification.EasyBolusNotifier
 
 class EasyBolusApp : Application() {
 
@@ -12,6 +13,9 @@ class EasyBolusApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        EasyBolusNotifier.ensureChannels(this)
+        EasyBolusNotifier.refreshAllAsync(this)
+
         val filter = IntentFilter().apply {
             addAction(JugglucoBroadcastParser.ACTION_GLUCODATA_MINUTE)
             addAction(JugglucoBroadcastParser.ACTION_XDRIP_BG_ESTIMATE)

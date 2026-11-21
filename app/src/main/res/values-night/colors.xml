@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_background">#25262A</color>
+    <color name="widget_text_primary">#E8EAED</color>
+    <color name="widget_text_secondary">#9AA0A6</color>
+    <color name="widget_divider">#3C4043</color>
+    <color name="widget_pill_iob">#476C80</color>
+    <color name="widget_pill_cob">#567A59</color>
+</resources>

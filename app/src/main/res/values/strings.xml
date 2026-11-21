@@ -137,4 +137,62 @@
     <string name="btn_clear_demo">Clear demo</string>
     <string name="btn_save_settings">Save settings</string>
     <string name="settings_saved_feedback">Settings saved</string>
+
+    <!-- Carb Factor Modes & Default Basal -->
+    <string name="settings_carb_factor_mode">Carb factor format</string>
+    <string name="factor_mode_g_per_ie">Carbs/U</string>
+    <string name="factor_mode_ie_per_10g">U/10g</string>
+    <string name="factor_mode_ie_per_be">U/12g (BE)</string>
+    <string name="settings_carb_ratio_g_per_ie">Carb ratio (g / 1 %1$s)</string>
+    <string name="settings_carb_ratio_ie_per_10g">Carb factor (%1$s / 10 g)</string>
+    <string name="settings_carb_ratio_ie_per_be">Carb factor (%1$s / 12 g BE)</string>
+    <string name="settings_default_basal">Default basal dose (%1$s, optional)</string>
+
+    <!-- Notifications & Correction Alert -->
+    <string name="settings_notifications_title">Notifications &amp; Correction Alert</string>
+    <string name="settings_persistent_notif">Persistent glucose notification</string>
+    <string name="settings_persistent_notif_sub">Shows live glucose in status bar &amp; notification shade</string>
+    <string name="settings_correction_alert">Correction reminder</string>
+    <string name="settings_correction_alert_sub">Alerts when net correction (minus IOB) stays above threshold</string>
+    <string name="settings_correction_min">Min. correction (%1$s)</string>
+    <string name="settings_correction_wait">Wait time (min)</string>
+    <string name="notif_channel_persistent">Live glucose</string>
+    <string name="notif_channel_correction">Correction reminder</string>
+    <string name="notif_correction_title">Correction recommended (~%1$s)</string>
+    <string name="notif_correction_body">BG: %1$s · Active IOB: %2$s</string>
+
+    <!-- Backup & Export -->
+    <string name="settings_backup_title">Backup &amp; Data Export</string>
+    <string name="btn_export_settings">Export settings</string>
+    <string name="btn_import_settings">Import settings</string>
+    <string name="btn_export_full_csv">Export all data (CSV)</string>
+    <string name="btn_export_full_json">Full backup (JSON)</string>
+    <string name="btn_import_full_json">Restore backup</string>
+    <string name="toast_export_success">Export saved</string>
+    <string name="toast_import_settings_ok">Settings imported</string>
+    <string name="toast_import_backup_ok">Restored %1$d readings &amp; %2$d entries</string>
+    <string name="toast_import_failed">Import failed (invalid file)</string>
+
+    <!-- Reports -->
+    <string name="btn_reports">Reports</string>
+    <string name="reports_title">Reports</string>
+    <string name="reports_back_cd">Back</string>
+    <string name="reports_period_7d">7 Days</string>
+    <string name="reports_period_14d">14 Days</string>
+    <string name="reports_period_30d">30 Days</string>
+    <string name="reports_period_90d">90 Days</string>
+    <string name="reports_active_days">Data available for %1$d of %2$d days</string>
+    <string name="reports_tir_title">Time in Target Range</string>
+    <string name="reports_tir_target_range">Target range: %1$s – %2$s %3$s</string>
+    <string name="reports_tier_very_high">&gt; %1$s</string>
+    <string name="reports_tier_range">%1$s – %2$s</string>
+    <string name="reports_tier_very_low">&lt; %1$s</string>
+    <string name="reports_agp_title">Daily Patterns (AGP)</string>
+    <string name="reports_agp_legend">Median · 25–75% · 5–95%</string>
+    <string name="reports_agp_empty">Not enough glucose readings in this period yet.</string>
+    <string name="reports_summary_title">Overview</string>
+    <string name="reports_cv">Variability (CV)</string>
+    <string name="reports_bolus_day">Avg Bolus/day</string>
+    <string name="reports_carbs_day">Avg Carbs/day</string>
+    <string name="reports_readings_count">Readings</string>
 </resources>

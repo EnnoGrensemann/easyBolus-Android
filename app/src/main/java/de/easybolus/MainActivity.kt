@@ -4,6 +4,7 @@ import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
@@ -40,12 +41,13 @@ import de.easybolus.ui.bolus.BolusReminderData
 import de.easybolus.ui.bolus.BolusReminderDialog
 import de.easybolus.ui.diary.DiaryScreen
 import de.easybolus.ui.home.HomeScreen
+import de.easybolus.ui.reports.ReportsScreen
 import de.easybolus.ui.settings.SettingsScreen
 import de.easybolus.ui.theme.EasyBolusTheme
 import de.easybolus.ui.theme.isEasyBolusDarkTheme
 
 private enum class AppScreen {
-    HOME, DIARY, SETTINGS
+    HOME, DIARY, SETTINGS, REPORTS
 }
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,7 @@ private fun EasyBolusRoot(
     val context = LocalContext.current
     val homeState by viewModel.homeUiState.collectAsState()
     val diaryEntries by viewModel.allDiaryEntries.collectAsState()
+    val reportReadings by viewModel.reportReadings90d.collectAsState()
     val settings by viewModel.settingsFlow.collectAsState()
 
     var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
@@ -73,6 +76,10 @@ private fun EasyBolusRoot(
     var bolusReminder by remember { mutableStateOf<BolusReminderData?>(null) }
 
     val isDark = isEasyBolusDarkTheme(settings.themeMode)
+
+    BackHandler(enabled = currentScreen == AppScreen.REPORTS) {
+        currentScreen = AppScreen.HOME
+    }
 
     DisposableEffect(isDark) {
         activity.enableEdgeToEdge(
@@ -119,7 +126,7 @@ private fun EasyBolusRoot(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     NavigationBarItem(
-                        selected = currentScreen == AppScreen.HOME,
+                        selected = currentScreen == AppScreen.HOME || currentScreen == AppScreen.REPORTS,
                         onClick = { currentScreen = AppScreen.HOME },
                         icon = { Icon(Icons.Default.Dashboard, contentDescription = stringResource(R.string.nav_home)) },
                         label = { Text(stringResource(R.string.nav_home)) }
@@ -144,6 +151,14 @@ private fun EasyBolusRoot(
                 AppScreen.HOME -> HomeScreen(
                     uiState = homeState,
                     onSaveManualGlucose = { mgDl -> viewModel.saveManualGlucose(mgDl) },
+                    onOpenReports = { currentScreen = AppScreen.REPORTS },
+                    modifier = bottomModifier
+                )
+                AppScreen.REPORTS -> ReportsScreen(
+                    readings = reportReadings,
+                    entries = diaryEntries,
+                    settings = settings,
+                    onBack = { currentScreen = AppScreen.HOME },
                     modifier = bottomModifier
                 )
                 AppScreen.DIARY -> DiaryScreen(
@@ -160,6 +175,17 @@ private fun EasyBolusRoot(
                     onSaveSettings = { viewModel.updateSettings(it) },
                     onInsertDemoData = { viewModel.insertDemoData() },
                     onClearDemoData = { viewModel.clearDemoData() },
+                    onExportFullCsv = {
+                        viewModel.exportAllDataCsv { readings, entries ->
+                            CsvExporter.shareFullCsv(context, readings, entries, settings.glucoseUnit)
+                        }
+                    },
+                    onRequestFullBackupJson = { onReady ->
+                        viewModel.buildFullBackupJson(onReady)
+                    },
+                    onRestoreFullBackupJson = { json, onResult ->
+                        viewModel.restoreFullBackupJson(json, onResult)
+                    },
                     modifier = bottomModifier
                 )
             }

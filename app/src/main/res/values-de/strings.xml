@@ -137,4 +137,62 @@
     <string name="btn_clear_demo">Demo löschen</string>
     <string name="btn_save_settings">Einstellungen speichern</string>
     <string name="settings_saved_feedback">Einstellungen gespeichert</string>
+
+    <!-- Carb Factor Modes & Default Basal -->
+    <string name="settings_carb_factor_mode">Berechnungsfaktor</string>
+    <string name="factor_mode_g_per_ie">KH/IE</string>
+    <string name="factor_mode_ie_per_10g">IE/10KH</string>
+    <string name="factor_mode_ie_per_be">IE/BE (12g)</string>
+    <string name="settings_carb_ratio_g_per_ie">KH-Faktor (g / 1 %1$s)</string>
+    <string name="settings_carb_ratio_ie_per_10g">Faktor (%1$s / 10 g KH)</string>
+    <string name="settings_carb_ratio_ie_per_be">Faktor (%1$s / 1 BE = 12 g)</string>
+    <string name="settings_default_basal">Basal-Standardwert (%1$s, optional)</string>
+
+    <!-- Notifications & Correction Alert -->
+    <string name="settings_notifications_title">Benachrichtigungen &amp; Korrektur-Meldung</string>
+    <string name="settings_persistent_notif">Dauerhafte BZ-Benachrichtigung</string>
+    <string name="settings_persistent_notif_sub">Zeigt Live-BZ in der Statusleiste &amp; Benachrichtigung</string>
+    <string name="settings_correction_alert">Korrektur-Meldung</string>
+    <string name="settings_correction_alert_sub">Meldet sich, wenn Netto-Korrektur (abzgl. IOB) nach Wartezeit über Schwelle bleibt</string>
+    <string name="settings_correction_min">Mindest-Korrektur (%1$s)</string>
+    <string name="settings_correction_wait">Wartezeit (Min.)</string>
+    <string name="notif_channel_persistent">Live-Blutzucker</string>
+    <string name="notif_channel_correction">Korrektur-Erinnerung</string>
+    <string name="notif_correction_title">Korrektur empfohlen (~%1$s)</string>
+    <string name="notif_correction_body">BZ: %1$s · Aktives IOB: %2$s</string>
+
+    <!-- Backup & Export -->
+    <string name="settings_backup_title">Backup &amp; Daten-Export</string>
+    <string name="btn_export_settings">Einstellungen exportieren</string>
+    <string name="btn_import_settings">Einstellungen importieren</string>
+    <string name="btn_export_full_csv">Alle Daten als CSV</string>
+    <string name="btn_export_full_json">Komplett-Backup (JSON)</string>
+    <string name="btn_import_full_json">Backup wiederherstellen</string>
+    <string name="toast_export_success">Export gespeichert</string>
+    <string name="toast_import_settings_ok">Einstellungen importiert</string>
+    <string name="toast_import_backup_ok">%1$d Messwerte &amp; %2$d Einträge wiederhergestellt</string>
+    <string name="toast_import_failed">Import fehlgeschlagen (ungültige Datei)</string>
+
+    <!-- Reports -->
+    <string name="btn_reports">Berichte</string>
+    <string name="reports_title">Berichte</string>
+    <string name="reports_back_cd">Zurück</string>
+    <string name="reports_period_7d">7 Tage</string>
+    <string name="reports_period_14d">14 Tage</string>
+    <string name="reports_period_30d">30 Tage</string>
+    <string name="reports_period_90d">90 Tage</string>
+    <string name="reports_active_days">Daten vorhanden für %1$d von %2$d Tagen</string>
+    <string name="reports_tir_title">Zeit im Zielbereich</string>
+    <string name="reports_tir_target_range">Zielbereich: %1$s – %2$s %3$s</string>
+    <string name="reports_tier_very_high">&gt; %1$s</string>
+    <string name="reports_tier_range">%1$s – %2$s</string>
+    <string name="reports_tier_very_low">&lt; %1$s</string>
+    <string name="reports_agp_title">Tagesmuster (AGP)</string>
+    <string name="reports_agp_legend">Median · 25–75% · 5–95%</string>
+    <string name="reports_agp_empty">Noch nicht genügend Messwerte in diesem Zeitraum.</string>
+    <string name="reports_summary_title">Übersicht</string>
+    <string name="reports_cv">Schwankung (CV)</string>
+    <string name="reports_bolus_day">Ø Bolus/Tag</string>
+    <string name="reports_carbs_day">Ø KH/Tag</string>
+    <string name="reports_readings_count">Messwerte</string>
 </resources>

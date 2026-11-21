@@ -26,8 +26,17 @@ interface EasyBolusDao {
     @Query("SELECT * FROM glucose_readings WHERE timestampMillis >= :sinceMillis ORDER BY timestampMillis ASC")
     fun observeGlucoseSince(sinceMillis: Long): Flow<List<GlucoseReadingEntity>>
 
+    @Query("SELECT * FROM glucose_readings WHERE timestampMillis >= :sinceMillis ORDER BY timestampMillis ASC")
+    suspend fun getGlucoseSince(sinceMillis: Long): List<GlucoseReadingEntity>
+
+    @Query("SELECT * FROM glucose_readings ORDER BY timestampMillis ASC")
+    suspend fun getAllGlucoseReadings(): List<GlucoseReadingEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDiaryEntry(entry: DiaryEntryEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDiaryEntries(entries: List<DiaryEntryEntity>)
 
     @Update
     suspend fun updateDiaryEntry(entry: DiaryEntryEntity)

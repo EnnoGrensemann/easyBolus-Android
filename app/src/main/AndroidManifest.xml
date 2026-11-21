@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".EasyBolusApp"
         android:allowBackup="true"
@@ -32,7 +34,20 @@
             </intent-filter>
         </receiver>
 
-        <!-- FileProvider für CSV-Export im Tagebuch -->
+        <!-- Startbildschirm-Widget -->
+        <receiver
+            android:name=".widget.EasyBolusWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/easybolus_widget_info" />
+        </receiver>
+
+        <!-- FileProvider für CSV- & JSON-Export -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
