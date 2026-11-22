@@ -5,33 +5,48 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -49,10 +64,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,10 +91,20 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
+private enum class SettingsCategory {
+    APPEARANCE,
+    INSULIN_PEN,
+    TARGETS,
+    NOTIFICATIONS,
+    SENSOR,
+    BACKUP
+}
+
 @Composable
 fun SettingsScreen(
     settings: UserSettings,
     hasJugglucoData: Boolean = false,
+    onBack: () -> Unit,
     onSaveSettings: (UserSettings) -> Unit,
     onInsertDemoData: () -> Unit,
     onClearDemoData: () -> Unit,
@@ -87,6 +116,24 @@ fun SettingsScreen(
     val context = LocalContext.current
     val locale = Locale.getDefault()
     val ieUnit = stringResource(R.string.unit_ie)
+    val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+
+    var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+
+    BackHandler {
+        if (activeCategory != null) {
+            activeCategory = null
+        } else {
+            onBack()
+        }
+    }
+
+    val versionName = remember(context) {
+        runCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull().orEmpty().ifBlank { "1.1.0" }
+    }
 
     var glucoseUnit by remember(settings) { mutableStateOf(settings.glucoseUnit) }
     var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
@@ -318,626 +365,838 @@ fun SettingsScreen(
 
     val dateStamp = remember { SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) }
 
+    val topTitle = when (activeCategory) {
+        null -> stringResource(R.string.nav_settings)
+        SettingsCategory.APPEARANCE -> stringResource(R.string.settings_appearance)
+        SettingsCategory.INSULIN_PEN -> stringResource(R.string.settings_factors_title)
+        SettingsCategory.TARGETS -> stringResource(R.string.settings_target_pen_title)
+        SettingsCategory.NOTIFICATIONS -> stringResource(R.string.settings_notifications_title)
+        SettingsCategory.SENSOR -> stringResource(R.string.settings_sensor_title)
+        SettingsCategory.BACKUP -> stringResource(R.string.settings_backup_title)
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        Column(
+        // Schlichte Android-/Pixel-Kopfzeile mit Zurück-Pfeil
+        Row(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Darstellung & Einheiten
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_appearance),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ThemeMode.entries.forEach { mode ->
-                            val modeLabel = when (mode) {
-                                ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
-                                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                                ThemeMode.DARK -> stringResource(R.string.theme_dark)
-                            }
-                            FilterChip(
-                                selected = themeMode == mode,
-                                onClick = { themeMode = mode },
-                                label = { Text(modeLabel) }
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_bg_unit),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GlucoseUnit.entries.forEach { u ->
-                            FilterChip(
-                                selected = glucoseUnit == u,
-                                onClick = { switchDisplayUnit(u) },
-                                label = { Text(GlucoseFormatter.unitLabel(u)) }
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_widget_transparency, widgetTransparency),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Slider(
-                        value = widgetTransparency.toFloat(),
-                        onValueChange = { raw ->
-                            widgetTransparency = ((raw / 5f).roundToInt() * 5).coerceIn(0, 100)
-                        },
-                        valueRange = 0f..100f,
-                        steps = 19,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            IconButton(
+                onClick = {
+                    if (activeCategory != null) activeCategory = null else onBack()
                 }
-            }
-
-            // 2. Insulin & Pen
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_factors_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.reports_back_cd),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = topTitle,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
-                    Text(
-                        text = stringResource(R.string.settings_carb_factor_mode),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CarbFactorMode.entries.forEach { mode ->
-                            val label = when (mode) {
-                                CarbFactorMode.GRAMS_PER_IE -> stringResource(R.string.factor_mode_g_per_ie)
-                                CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
-                                CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
-                            }
-                            FilterChip(
-                                selected = carbFactorMode == mode,
-                                onClick = { switchCarbFactorMode(mode) },
-                                label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                            )
-                        }
-                    }
+        if (activeCategory == null) {
+            // === KATEGORIEN-ÜBERSICHT (Android-Einstellungen Stil) ===
+            val themeLabel = when (settings.themeMode) {
+                ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                ThemeMode.DARK -> stringResource(R.string.theme_dark)
+            }
+            val savedUnitLabel = GlucoseFormatter.unitLabel(settings.glucoseUnit)
+            val savedFactorModeLabel = when (settings.carbFactorMode) {
+                CarbFactorMode.GRAMS_PER_IE -> stringResource(R.string.factor_mode_g_per_ie)
+                CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
+                CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
+            }
+            val savedFactorDisplay = CarbFactorFormatter.formatDisplay(
+                settings.carbRatio,
+                settings.carbFactorMode,
+                locale
+            )
+            val savedIsfDisplay = GlucoseFormatter.formatFactorInput(settings.isf, settings.glucoseUnit)
+            val savedPenDisplay = String.format(locale, "%.1f", settings.penStepSize)
+            val savedTargetDisplay = GlucoseFormatter.formatValue(settings.targetBg, settings.glucoseUnit, locale)
+            val savedMinDisplay = GlucoseFormatter.formatValue(settings.targetRangeMin, settings.glucoseUnit, locale)
+            val savedMaxDisplay = GlucoseFormatter.formatValue(settings.targetRangeMax, settings.glucoseUnit, locale)
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = carbRatio,
-                            onValueChange = { carbRatio = it },
-                            label = { Text(carbRatioLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = isf,
-                            onValueChange = { isf = it },
-                            label = {
-                                Text(
-                                    stringResource(R.string.settings_isf, unitLabel),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+            val notifSummary = listOf(
+                stringResource(
+                    if (settings.persistentNotificationEnabled) R.string.settings_summary_notif_status_on
+                    else R.string.settings_summary_notif_status_off
+                ),
+                stringResource(
+                    if (settings.correctionAlertEnabled) R.string.settings_summary_notif_corr_on
+                    else R.string.settings_summary_notif_corr_off
+                )
+            ).joinToString(" · ")
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = diaHours,
-                            onValueChange = { diaHours = it },
-                            label = {
-                                Text(
-                                    stringResource(R.string.settings_dia),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = defaultBasal,
-                            onValueChange = { defaultBasal = it },
-                            label = {
-                                Text(
-                                    stringResource(R.string.settings_default_basal, ieUnit),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SettingsCategoryRow(
+                    icon = Icons.Default.Palette,
+                    iconBg = if (isDark) Color(0xFF2E3A59) else Color(0xFFDFE5F8),
+                    iconTint = if (isDark) Color(0xFFB3C5FF) else Color(0xFF344E8F),
+                    title = stringResource(R.string.settings_appearance),
+                    subtitle = stringResource(
+                        R.string.settings_summary_appearance,
+                        themeLabel,
+                        savedUnitLabel,
+                        settings.widgetTransparencyPercent
+                    ),
+                    onClick = { activeCategory = SettingsCategory.APPEARANCE }
+                )
 
-                    Text(
-                        text = stringResource(R.string.settings_insulin_profile),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        InsulinType.entries.forEach { type ->
-                            val typeLabel = when (type) {
-                                InsulinType.RAPID -> stringResource(R.string.insulin_rapid_short)
-                                InsulinType.ULTRA_RAPID -> stringResource(R.string.insulin_ultra_rapid_short)
-                            }
-                            FilterChip(
-                                selected = insulinType == type,
-                                onClick = { insulinType = type },
-                                label = { Text(typeLabel) }
-                            )
-                        }
-                    }
+                SettingsCategoryRow(
+                    icon = Icons.Default.Vaccines,
+                    iconBg = if (isDark) Color(0xFF213C47) else Color(0xFFD7EAF2),
+                    iconTint = if (isDark) Color(0xFF8FD0E8) else Color(0xFF285F75),
+                    title = stringResource(R.string.settings_factors_title),
+                    subtitle = stringResource(
+                        R.string.settings_summary_insulin,
+                        savedFactorDisplay,
+                        savedFactorModeLabel,
+                        savedIsfDisplay,
+                        savedPenDisplay,
+                        ieUnit
+                    ),
+                    onClick = { activeCategory = SettingsCategory.INSULIN_PEN }
+                )
 
-                    Text(
-                        text = stringResource(R.string.settings_pen_step),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = penStep == 0.5,
-                            onClick = { penStep = 0.5 },
-                            label = { Text(stringResource(R.string.settings_pen_half)) }
-                        )
-                        FilterChip(
-                            selected = penStep == 1.0,
-                            onClick = { penStep = 1.0 },
-                            label = { Text(stringResource(R.string.settings_pen_full)) }
-                        )
-                    }
+                SettingsCategoryRow(
+                    icon = Icons.Default.TrackChanges,
+                    iconBg = if (isDark) Color(0xFF1B3F34) else Color(0xFFD4F0E5),
+                    iconTint = if (isDark) Color(0xFF7AD9B8) else Color(0xFF0E6B4F),
+                    title = stringResource(R.string.settings_target_pen_title),
+                    subtitle = stringResource(
+                        R.string.settings_summary_targets,
+                        savedTargetDisplay,
+                        savedMinDisplay,
+                        savedMaxDisplay,
+                        savedUnitLabel
+                    ),
+                    onClick = { activeCategory = SettingsCategory.TARGETS }
+                )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                SettingsCategoryRow(
+                    icon = Icons.Default.Notifications,
+                    iconBg = if (isDark) Color(0xFF473A1D) else Color(0xFFFBEFD3),
+                    iconTint = if (isDark) Color(0xFFF5CA72) else Color(0xFF8A5A00),
+                    title = stringResource(R.string.settings_notifications_title),
+                    subtitle = notifSummary,
+                    onClick = { activeCategory = SettingsCategory.NOTIFICATIONS }
+                )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                SettingsCategoryRow(
+                    icon = Icons.Default.Sensors,
+                    iconBg = if (isDark) Color(0xFF38304D) else Color(0xFFE8E2F8),
+                    iconTint = if (isDark) Color(0xFFC8B8F5) else Color(0xFF533E8E),
+                    title = stringResource(R.string.settings_sensor_title),
+                    subtitle = stringResource(
+                        if (settings.jugglucoEnabled) R.string.settings_summary_sensor_on
+                        else R.string.settings_summary_sensor_off
+                    ),
+                    onClick = { activeCategory = SettingsCategory.SENSOR }
+                )
+
+                SettingsCategoryRow(
+                    icon = Icons.Default.CloudUpload,
+                    iconBg = if (isDark) Color(0xFF263D2B) else Color(0xFFDCEADE),
+                    iconTint = if (isDark) Color(0xFF9AC9A6) else Color(0xFF356340),
+                    title = stringResource(R.string.settings_backup_title),
+                    subtitle = stringResource(R.string.settings_summary_backup),
+                    onClick = { activeCategory = SettingsCategory.BACKUP }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "easyBOLUS v$versionName",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                )
+            }
+        } else {
+            // === DETAIL-UNTERSEITE DER GEWÄHLTEN KATEGORIE ===
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                when (activeCategory) {
+                    SettingsCategory.APPEARANCE -> {
+                        SettingsDetailCard {
                             Text(
-                                text = stringResource(R.string.settings_hourly_carb_ratio),
+                                text = stringResource(R.string.settings_appearance),
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
+                                fontSize = 16.sp
                             )
-                            Text(
-                                text = stringResource(R.string.settings_hourly_carb_ratio_sub),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Switch(
-                            checked = useHourlyCarbRatio,
-                            onCheckedChange = {
-                                useHourlyCarbRatio = it
-                                if (it) hourlyExpanded = true
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ThemeMode.entries.forEach { mode ->
+                                    val modeLabel = when (mode) {
+                                        ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+                                        ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                                        ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                                    }
+                                    FilterChip(
+                                        selected = themeMode == mode,
+                                        onClick = { themeMode = mode },
+                                        label = { Text(modeLabel) }
+                                    )
+                                }
                             }
-                        )
-                    }
 
-                    if (useHourlyCarbRatio) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { hourlyExpanded = !hourlyExpanded }
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
                             Text(
-                                text = stringResource(
-                                    if (hourlyExpanded) R.string.settings_hourly_collapse
-                                    else R.string.settings_hourly_expand
-                                ),
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
+                                text = stringResource(R.string.settings_bg_unit),
+                                fontWeight = FontWeight.Medium,
                                 fontSize = 14.sp
                             )
-                            Icon(
-                                imageVector = if (hourlyExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                GlucoseUnit.entries.forEach { u ->
+                                    FilterChip(
+                                        selected = glucoseUnit == u,
+                                        onClick = { switchDisplayUnit(u) },
+                                        label = { Text(GlucoseFormatter.unitLabel(u)) }
+                                    )
+                                }
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                            Text(
+                                text = stringResource(R.string.settings_widget_transparency, widgetTransparency),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Slider(
+                                value = widgetTransparency.toFloat(),
+                                onValueChange = { raw ->
+                                    widgetTransparency = ((raw / 5f).roundToInt() * 5).coerceIn(0, 100)
+                                },
+                                valueRange = 0f..100f,
+                                steps = 19,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
 
-                    AnimatedVisibility(visible = useHourlyCarbRatio && hourlyExpanded) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(
-                                onClick = {
-                                    val fillValue = carbRatio.ifBlank {
-                                        CarbFactorFormatter.formatInput(settings.carbRatio, carbFactorMode)
+                    SettingsCategory.INSULIN_PEN -> {
+                        // Karte 1: Berechnungsfaktor & Grundwerte
+                        SettingsDetailCard {
+                            Text(
+                                text = stringResource(R.string.settings_card_factors),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CarbFactorMode.entries.forEach { mode ->
+                                    val label = when (mode) {
+                                        CarbFactorMode.GRAMS_PER_IE -> stringResource(R.string.factor_mode_g_per_ie)
+                                        CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
+                                        CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
                                     }
-                                    for (h in 0 until 24) {
-                                        hourlyCarbRatios[h] = fillValue
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.settings_hourly_copy_base, carbRatio))
+                                    FilterChip(
+                                        selected = carbFactorMode == mode,
+                                        onClick = { switchCarbFactorMode(mode) },
+                                        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                                    )
+                                }
                             }
 
-                            for (row in 0 until 8) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    for (col in 0 until 3) {
-                                        val hour = row * 3 + col
-                                        OutlinedTextField(
-                                            value = hourlyCarbRatios[hour],
-                                            onValueChange = { hourlyCarbRatios[hour] = it },
-                                            label = { Text(String.format(locale, "%02d:00", hour)) },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedTextField(
+                                    value = carbRatio,
+                                    onValueChange = { carbRatio = it },
+                                    label = { Text(carbRatioLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = isf,
+                                    onValueChange = { isf = it },
+                                    label = {
+                                        Text(
+                                            stringResource(R.string.settings_isf, unitLabel),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedTextField(
+                                    value = diaHours,
+                                    onValueChange = { diaHours = it },
+                                    label = {
+                                        Text(
+                                            stringResource(R.string.settings_dia),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = defaultBasal,
+                                    onValueChange = { defaultBasal = it },
+                                    label = {
+                                        Text(
+                                            stringResource(R.string.settings_default_basal, ieUnit),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        // Karte 2: Insulin-Wirkprofil & Pen-Schrittweite
+                        SettingsDetailCard {
+                            Text(
+                                text = stringResource(R.string.settings_card_insulin_pen),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+
+                            Text(
+                                text = stringResource(R.string.settings_insulin_profile),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                InsulinType.entries.forEach { type ->
+                                    val typeLabel = when (type) {
+                                        InsulinType.RAPID -> stringResource(R.string.insulin_rapid_short)
+                                        InsulinType.ULTRA_RAPID -> stringResource(R.string.insulin_ultra_rapid_short)
+                                    }
+                                    FilterChip(
+                                        selected = insulinType == type,
+                                        onClick = { insulinType = type },
+                                        label = { Text(typeLabel) }
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = stringResource(R.string.settings_pen_step),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = penStep == 0.5,
+                                    onClick = { penStep = 0.5 },
+                                    label = { Text(stringResource(R.string.settings_pen_half)) }
+                                )
+                                FilterChip(
+                                    selected = penStep == 1.0,
+                                    onClick = { penStep = 1.0 },
+                                    label = { Text(stringResource(R.string.settings_pen_full)) }
+                                )
+                            }
+                        }
+
+                        // Karte 3: Stündlicher KH-Faktor
+                        SettingsDetailCard {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_hourly_carb_ratio),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_hourly_carb_ratio_sub),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Switch(
+                                    checked = useHourlyCarbRatio,
+                                    onCheckedChange = {
+                                        useHourlyCarbRatio = it
+                                        if (it) hourlyExpanded = true
+                                    }
+                                )
+                            }
+
+                            if (useHourlyCarbRatio) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { hourlyExpanded = !hourlyExpanded }
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            if (hourlyExpanded) R.string.settings_hourly_collapse
+                                            else R.string.settings_hourly_expand
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp
+                                    )
+                                    Icon(
+                                        imageVector = if (hourlyExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(visible = useHourlyCarbRatio && hourlyExpanded) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(
+                                        onClick = {
+                                            val fillValue = carbRatio.ifBlank {
+                                                CarbFactorFormatter.formatInput(settings.carbRatio, carbFactorMode)
+                                            }
+                                            for (h in 0 until 24) {
+                                                hourlyCarbRatios[h] = fillValue
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(stringResource(R.string.settings_hourly_copy_base, carbRatio))
+                                    }
+
+                                    for (row in 0 until 8) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            for (col in 0 until 3) {
+                                                val hour = row * 3 + col
+                                                OutlinedTextField(
+                                                    value = hourlyCarbRatios[hour],
+                                                    onValueChange = { hourlyCarbRatios[hour] = it },
+                                                    label = { Text(String.format(locale, "%02d:00", hour)) },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                    singleLine = true,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            // 3. Zielwerte
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_target_pen_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-
-                    OutlinedTextField(
-                        value = targetBg,
-                        onValueChange = { targetBg = it },
-                        label = { Text(stringResource(R.string.settings_target_bg, unitLabel)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = rangeMin,
-                            onValueChange = { rangeMin = it },
-                            label = { Text(stringResource(R.string.settings_range_min, unitLabel)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = rangeMax,
-                            onValueChange = { rangeMax = it },
-                            label = { Text(stringResource(R.string.settings_range_max, unitLabel)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            // 4. Benachrichtigungen & Korrektur-Meldung
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_notifications_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text(
-                                text = stringResource(R.string.settings_persistent_notif),
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_persistent_notif_sub),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Switch(
-                            checked = persistentNotificationEnabled,
-                            onCheckedChange = { enabled ->
-                                persistentNotificationEnabled = enabled
-                                if (enabled) ensureNotificationPermission()
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text(
-                                text = stringResource(R.string.settings_correction_alert),
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_correction_alert_sub),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Switch(
-                            checked = correctionAlertEnabled,
-                            onCheckedChange = { enabled ->
-                                correctionAlertEnabled = enabled
-                                if (enabled) ensureNotificationPermission()
-                            }
-                        )
-                    }
-
-                    AnimatedVisibility(visible = correctionAlertEnabled) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                    SettingsCategory.TARGETS -> {
+                        SettingsDetailCard {
                             OutlinedTextField(
-                                value = correctionMinUnits,
-                                onValueChange = { correctionMinUnits = it },
-                                label = {
+                                value = targetBg,
+                                onValueChange = { targetBg = it },
+                                label = { Text(stringResource(R.string.settings_target_bg, unitLabel)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedTextField(
+                                    value = rangeMin,
+                                    onValueChange = { rangeMin = it },
+                                    label = { Text(stringResource(R.string.settings_range_min, unitLabel)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = rangeMax,
+                                    onValueChange = { rangeMax = it },
+                                    label = { Text(stringResource(R.string.settings_range_max, unitLabel)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = bgKeyboardType),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    SettingsCategory.NOTIFICATIONS -> {
+                        SettingsDetailCard {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                     Text(
-                                        stringResource(R.string.settings_correction_min, ieUnit),
+                                        text = stringResource(R.string.settings_persistent_notif),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_persistent_notif_sub),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Switch(
+                                    checked = persistentNotificationEnabled,
+                                    onCheckedChange = { enabled ->
+                                        persistentNotificationEnabled = enabled
+                                        if (enabled) ensureNotificationPermission()
+                                    }
+                                )
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_correction_alert),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_correction_alert_sub),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Switch(
+                                    checked = correctionAlertEnabled,
+                                    onCheckedChange = { enabled ->
+                                        correctionAlertEnabled = enabled
+                                        if (enabled) ensureNotificationPermission()
+                                    }
+                                )
+                            }
+
+                            AnimatedVisibility(visible = correctionAlertEnabled) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    OutlinedTextField(
+                                        value = correctionMinUnits,
+                                        onValueChange = { correctionMinUnits = it },
+                                        label = {
+                                            Text(
+                                                stringResource(R.string.settings_correction_min, ieUnit),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = correctionWaitMinutes,
+                                        onValueChange = { correctionWaitMinutes = it.filter { ch -> ch.isDigit() } },
+                                        label = {
+                                            Text(
+                                                stringResource(R.string.settings_correction_wait),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsCategory.SENSOR -> {
+                        SettingsDetailCard {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_juggluco_toggle),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_juggluco_toggle_sub),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Switch(
+                                    checked = jugglucoEnabled,
+                                    onCheckedChange = { jugglucoEnabled = it }
+                                )
+                            }
+
+                            if (!jugglucoEnabled) {
+                                Text(
+                                    text = stringResource(R.string.settings_manual_active),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else if (hasJugglucoData) {
+                                Text(
+                                    text = stringResource(R.string.settings_juggluco_active),
+                                    color = BgInRangeGreen,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.settings_juggluco_hint),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(onClick = onInsertDemoData, modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        stringResource(R.string.btn_load_demo),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = correctionWaitMinutes,
-                                onValueChange = { correctionWaitMinutes = it.filter { ch -> ch.isDigit() } },
-                                label = {
+                                }
+                                OutlinedButton(onClick = onClearDemoData, modifier = Modifier.weight(1f)) {
                                     Text(
-                                        stringResource(R.string.settings_correction_wait),
+                                        stringResource(R.string.btn_clear_demo),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
+                                }
+                            }
                         }
                     }
+
+                    SettingsCategory.BACKUP -> {
+                        SettingsDetailCard {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { exportSettingsLauncher.launch("easyBOLUS_settings_$dateStamp.json") },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.btn_export_settings),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = { importSettingsLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.btn_import_settings),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = onExportFullCsv,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.btn_export_full_csv))
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { exportFullJsonLauncher.launch("easyBOLUS_backup_$dateStamp.json") },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.btn_export_full_json),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = { importFullJsonLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.btn_import_full_json),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    null -> Unit
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 5. Sensor-Anbindung (Juggluco / xDrip abschaltbar) & Testdaten
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            if (activeCategory != SettingsCategory.BACKUP) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_sensor_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Button(
+                        onClick = {
+                            onSaveSettings(buildCurrentSettings())
+                            Toast.makeText(context, savedToastText, Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .height(48.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_juggluco_toggle),
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_juggluco_toggle_sub),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Switch(
-                            checked = jugglucoEnabled,
-                            onCheckedChange = { jugglucoEnabled = it }
-                        )
-                    }
-
-                    if (!jugglucoEnabled) {
-                        Text(
-                            text = stringResource(R.string.settings_manual_active),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    } else if (hasJugglucoData) {
-                        Text(
-                            text = stringResource(R.string.settings_juggluco_active),
-                            color = BgInRangeGreen,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.settings_juggluco_hint),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(onClick = onInsertDemoData, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_load_demo), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        OutlinedButton(onClick = onClearDemoData, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_clear_demo), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                        Text(stringResource(R.string.btn_save_settings), fontWeight = FontWeight.SemiBold)
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.navigationBarsPadding())
             }
-
-            // 6. Backup & Daten-Export
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_backup_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { exportSettingsLauncher.launch("easyBOLUS_settings_$dateStamp.json") },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(R.string.btn_export_settings),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { importSettingsLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(R.string.btn_import_settings),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = onExportFullCsv,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.btn_export_full_csv))
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { exportFullJsonLauncher.launch("easyBOLUS_backup_$dateStamp.json") },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(R.string.btn_export_full_json),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { importFullJsonLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(R.string.btn_import_full_json),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
         }
+    }
+}
 
-        // Fixierte Speichern-Leiste direkt oberhalb der Navigationsleiste
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp
+@Composable
+private fun SettingsCategoryRow(
+    icon: ImageVector,
+    iconBg: Color,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(
-                onClick = {
-                    onSaveSettings(buildCurrentSettings())
-                    Toast.makeText(context, savedToastText, Toast.LENGTH_SHORT).show()
-                },
-                shape = RoundedCornerShape(14.dp),
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .height(46.dp)
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(R.string.btn_save_settings), fontWeight = FontWeight.SemiBold)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
             }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsDetailCard(
+    content: @Composable () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            content()
         }
     }
 }

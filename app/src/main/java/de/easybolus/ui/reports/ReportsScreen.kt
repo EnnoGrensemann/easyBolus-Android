@@ -78,7 +78,7 @@ fun ReportsScreen(
     readings: List<GlucoseReadingEntity>,
     entries: List<DiaryEntryEntity>,
     settings: UserSettings,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val locale = Locale.getDefault()
@@ -104,20 +104,27 @@ fun ReportsScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(
+                    start = if (onBack != null) 8.dp else 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 4.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.reports_back_cd),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.reports_back_cd),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.reports_title),
-                    fontSize = 20.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )

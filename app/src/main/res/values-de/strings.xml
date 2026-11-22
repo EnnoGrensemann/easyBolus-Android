@@ -149,7 +149,7 @@
     <string name="settings_default_basal">Basal-Standardwert (%1$s, optional)</string>
 
     <!-- Notifications & Correction Alert -->
-    <string name="settings_notifications_title">Benachrichtigungen &amp; Korrektur-Meldung</string>
+    <string name="settings_notifications_title">Benachrichtigungen</string>
     <string name="settings_persistent_notif">Dauerhafte BZ-Benachrichtigung</string>
     <string name="settings_persistent_notif_sub">Zeigt Live-BZ in der Statusleiste &amp; Benachrichtigung</string>
     <string name="settings_correction_alert">Korrektur-Meldung</string>
@@ -202,4 +202,18 @@
     <string name="bolus_eat_carbs_sub">Um den Zielwert zu erreichen</string>
     <string name="bolus_eat_carbs_apply">Übernehmen</string>
     <string name="settings_widget_transparency">Widget-Transparenz: %1$d %%</string>
+
+    <!-- Settings Overview Summaries -->
+    <string name="settings_summary_appearance">%1$s · %2$s · Widget %3$d %%</string>
+    <string name="settings_summary_insulin">%1$s %2$s · ISF %3$s · %4$s %5$s</string>
+    <string name="settings_summary_targets">Ziel %1$s · Bereich %2$s–%3$s %4$s</string>
+    <string name="settings_summary_notif_status_on">Statusleiste aktiv</string>
+    <string name="settings_summary_notif_status_off">Statusleiste aus</string>
+    <string name="settings_summary_notif_corr_on">Korrektur-Meldung aktiv</string>
+    <string name="settings_summary_notif_corr_off">Korrektur-Meldung aus</string>
+    <string name="settings_summary_sensor_on">Juggluco / xDrip aktiv</string>
+    <string name="settings_summary_sensor_off">Manueller Modus</string>
+    <string name="settings_summary_backup">Einstellungen, CSV &amp; Komplett-Backup</string>
+    <string name="settings_card_factors">Berechnungsfaktor</string>
+    <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
 </resources>

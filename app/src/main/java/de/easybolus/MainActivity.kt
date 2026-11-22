@@ -4,16 +4,16 @@ import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -47,7 +47,7 @@ import de.easybolus.ui.theme.EasyBolusTheme
 import de.easybolus.ui.theme.isEasyBolusDarkTheme
 
 private enum class AppScreen {
-    HOME, DIARY, SETTINGS, REPORTS
+    HOME, DIARY, REPORTS, SETTINGS
 }
 
 class MainActivity : ComponentActivity() {
@@ -81,10 +81,6 @@ private fun EasyBolusRoot(
     var bolusReminder by remember { mutableStateOf<BolusReminderData?>(null) }
 
     val isDark = isEasyBolusDarkTheme(settings.themeMode)
-
-    BackHandler(enabled = currentScreen == AppScreen.REPORTS) {
-        currentScreen = AppScreen.HOME
-    }
 
     DisposableEffect(isDark) {
         activity.enableEdgeToEdge(
@@ -127,27 +123,44 @@ private fun EasyBolusRoot(
                 }
             },
             bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ) {
-                    NavigationBarItem(
-                        selected = currentScreen == AppScreen.HOME || currentScreen == AppScreen.REPORTS,
-                        onClick = { currentScreen = AppScreen.HOME },
-                        icon = { Icon(Icons.Default.Dashboard, contentDescription = stringResource(R.string.nav_home)) },
-                        label = { Text(stringResource(R.string.nav_home)) }
-                    )
-                    NavigationBarItem(
-                        selected = currentScreen == AppScreen.DIARY,
-                        onClick = { currentScreen = AppScreen.DIARY },
-                        icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = stringResource(R.string.nav_diary)) },
-                        label = { Text(stringResource(R.string.nav_diary)) }
-                    )
-                    NavigationBarItem(
-                        selected = currentScreen == AppScreen.SETTINGS,
-                        onClick = { currentScreen = AppScreen.SETTINGS },
-                        icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings)) },
-                        label = { Text(stringResource(R.string.nav_settings)) }
-                    )
+                if (currentScreen != AppScreen.SETTINGS) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ) {
+                        NavigationBarItem(
+                            selected = currentScreen == AppScreen.HOME,
+                            onClick = { currentScreen = AppScreen.HOME },
+                            icon = {
+                                Icon(
+                                    Icons.Default.Dashboard,
+                                    contentDescription = stringResource(R.string.nav_home)
+                                )
+                            },
+                            label = { Text(stringResource(R.string.nav_home)) }
+                        )
+                        NavigationBarItem(
+                            selected = currentScreen == AppScreen.DIARY,
+                            onClick = { currentScreen = AppScreen.DIARY },
+                            icon = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.MenuBook,
+                                    contentDescription = stringResource(R.string.nav_diary)
+                                )
+                            },
+                            label = { Text(stringResource(R.string.nav_diary)) }
+                        )
+                        NavigationBarItem(
+                            selected = currentScreen == AppScreen.REPORTS,
+                            onClick = { currentScreen = AppScreen.REPORTS },
+                            icon = {
+                                Icon(
+                                    Icons.Default.BarChart,
+                                    contentDescription = stringResource(R.string.reports_title)
+                                )
+                            },
+                            label = { Text(stringResource(R.string.reports_title)) }
+                        )
+                    }
                 }
             }
         ) { innerPadding ->
@@ -156,14 +169,13 @@ private fun EasyBolusRoot(
                 AppScreen.HOME -> HomeScreen(
                     uiState = homeState,
                     onSaveManualGlucose = { mgDl -> viewModel.saveManualGlucose(mgDl) },
-                    onOpenReports = { currentScreen = AppScreen.REPORTS },
+                    onOpenSettings = { currentScreen = AppScreen.SETTINGS },
                     modifier = bottomModifier
                 )
                 AppScreen.REPORTS -> ReportsScreen(
                     readings = reportReadings,
                     entries = diaryEntries,
                     settings = settings,
-                    onBack = { currentScreen = AppScreen.HOME },
                     modifier = bottomModifier
                 )
                 AppScreen.DIARY -> DiaryScreen(
@@ -177,6 +189,7 @@ private fun EasyBolusRoot(
                 AppScreen.SETTINGS -> SettingsScreen(
                     settings = settings,
                     hasJugglucoData = homeState.hasJugglucoData,
+                    onBack = { currentScreen = AppScreen.HOME },
                     onSaveSettings = { viewModel.updateSettings(it) },
                     onInsertDemoData = { viewModel.insertDemoData() },
                     onClearDemoData = { viewModel.clearDemoData() },
@@ -191,7 +204,7 @@ private fun EasyBolusRoot(
                     onRestoreFullBackupJson = { json, onResult ->
                         viewModel.restoreFullBackupJson(json, onResult)
                     },
-                    modifier = bottomModifier
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }

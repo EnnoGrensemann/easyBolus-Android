@@ -149,7 +149,7 @@
     <string name="settings_default_basal">Default basal dose (%1$s, optional)</string>
 
     <!-- Notifications & Correction Alert -->
-    <string name="settings_notifications_title">Notifications &amp; Correction Alert</string>
+    <string name="settings_notifications_title">Notifications</string>
     <string name="settings_persistent_notif">Persistent glucose notification</string>
     <string name="settings_persistent_notif_sub">Shows live glucose in status bar &amp; notification shade</string>
     <string name="settings_correction_alert">Correction reminder</string>
@@ -202,4 +202,18 @@
     <string name="bolus_eat_carbs_sub">To reach your target glucose</string>
     <string name="bolus_eat_carbs_apply">Apply</string>
     <string name="settings_widget_transparency">Widget transparency: %1$d%%</string>
+
+    <!-- Settings Overview Summaries -->
+    <string name="settings_summary_appearance">%1$s · %2$s · Widget %3$d%%</string>
+    <string name="settings_summary_insulin">%1$s %2$s · ISF %3$s · %4$s %5$s</string>
+    <string name="settings_summary_targets">Target %1$s · Range %2$s–%3$s %4$s</string>
+    <string name="settings_summary_notif_status_on">Status bar on</string>
+    <string name="settings_summary_notif_status_off">Status bar off</string>
+    <string name="settings_summary_notif_corr_on">Correction on</string>
+    <string name="settings_summary_notif_corr_off">Correction off</string>
+    <string name="settings_summary_sensor_on">Juggluco / xDrip active</string>
+    <string name="settings_summary_sensor_off">Manual mode</string>
+    <string name="settings_summary_backup">Settings, CSV &amp; full backup</string>
+    <string name="settings_card_factors">Calculation factors</string>
+    <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
 </resources>
