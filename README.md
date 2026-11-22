@@ -22,7 +22,7 @@ Eine moderne, schlanke Android-App (Jetpack Compose / Material 3) zur schnellen 
 
 | Dashboard (Hell) | Dashboard (Dunkel) | Tagebuch |
 | :---: | :---: | :---: |
-| <img src="docs/screenshots/dashboard-light.png" width="240" alt="Dashboard im hellen Design" /> | <img src="docs/screenshots/dashboard-dark.png" width="240" alt="Dashboard im dunklen Design" /> | <img src="docs/screenshots/diary.png" width="240" alt="Tagebuch mit gruppierten Einträgen" /> |
+| <img src="docs/screenshots/dashboard-light-v1.1.2.png" width="240" alt="Dashboard im hellen Design" /> | <img src="docs/screenshots/dashboard-dark-v1.1.2.png" width="240" alt="Dashboard im dunklen Design" /> | <img src="docs/screenshots/diary-v1.1.2.png" width="240" alt="Tagebuch mit gruppierten Einträgen" /> |
 
 | Berichte (Hell) | Berichte (Dunkel) | Bolus-Rechner |
 | :---: | :---: | :---: |
