@@ -83,7 +83,7 @@ fun ReportsScreen(
 ) {
     val locale = Locale.getDefault()
     val dateRangeFmt = remember(locale) { SimpleDateFormat("dd. MMM yyyy", locale) }
-    var selectedPeriod by remember { mutableStateOf(ReportPeriod.DAYS_14) }
+    var selectedPeriod by remember { mutableStateOf(ReportPeriod.DAYS_90) }
 
     val summary = remember(readings, entries, selectedPeriod, settings) {
         ReportCalculator.calculate(
@@ -316,7 +316,7 @@ private fun TirTierRow(
                 .clip(RoundedCornerShape(6.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
         ) {
-            if (fraction > 0f) {
+            if (pctInt > 0) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(fraction.coerceAtLeast(0.03f))

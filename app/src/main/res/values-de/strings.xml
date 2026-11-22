@@ -111,15 +111,15 @@
     <string name="settings_factors_title">Insulin &amp; Pen</string>
     <string name="settings_carb_ratio">KH-Faktor (g / 1 %1$s)</string>
     <string name="settings_isf">Korrekturfaktor (%1$s)</string>
-    <string name="settings_dia">Insulin-Wirkdauer DIA (Std.)</string>
+    <string name="settings_dia">Wirkdauer DIA (Std.)</string>
     <string name="settings_insulin_profile">Insulin-Wirkprofil (IOB-Kurve)</string>
     <string name="insulin_rapid_short">Schnell (75 min)</string>
     <string name="insulin_ultra_rapid_short">Ultra-Schnell (55 min)</string>
-    <string name="settings_hourly_carb_ratio">Stündlicher KH-Faktor</string>
-    <string name="settings_hourly_carb_ratio_sub">Eigener KH-Faktor für jede Stunde (00–23 Uhr)</string>
-    <string name="settings_hourly_expand">24-Stunden-Werte bearbeiten</string>
-    <string name="settings_hourly_collapse">24-Stunden-Werte einklappen</string>
-    <string name="settings_hourly_copy_base">Basis-KH-Faktor (%1$s) für alle Stunden übernehmen</string>
+    <string name="settings_hourly_carb_ratio">Stündliche Faktoren</string>
+    <string name="settings_hourly_carb_ratio_sub">Eigener Faktor für jede Stunde (00–23 Uhr)</string>
+    <string name="settings_hourly_expand">24-Stunden-Faktoren bearbeiten (%1$s)</string>
+    <string name="settings_hourly_collapse">24-Stunden-Faktoren einklappen (%1$s)</string>
+    <string name="settings_hourly_copy_base">Wert von 00:00 (%1$s) für alle Stunden übernehmen</string>
     <string name="settings_target_pen_title">Zielwerte</string>
     <string name="settings_target_bg">Zielwert (%1$s)</string>
     <string name="settings_range_min">Zielbereich Min (%1$s)</string>
@@ -143,10 +143,10 @@
     <string name="factor_mode_g_per_ie">KH/IE</string>
     <string name="factor_mode_ie_per_10g">IE/10KH</string>
     <string name="factor_mode_ie_per_be">IE/BE (12g)</string>
-    <string name="settings_carb_ratio_g_per_ie">KH-Faktor (g / 1 %1$s)</string>
-    <string name="settings_carb_ratio_ie_per_10g">Faktor (%1$s / 10 g KH)</string>
-    <string name="settings_carb_ratio_ie_per_be">Faktor (%1$s / 1 BE = 12 g)</string>
-    <string name="settings_default_basal">Basal-Standardwert (%1$s, optional)</string>
+    <string name="settings_carb_ratio_g_per_ie">Tagesfaktor (g KH / 1 %1$s)</string>
+    <string name="settings_carb_ratio_ie_per_10g">Tagesfaktor (%1$s / 10 g KH)</string>
+    <string name="settings_carb_ratio_ie_per_be">Tagesfaktor (%1$s / 1 BE = 12 g)</string>
+    <string name="settings_default_basal">Basal-Standard (%1$s, optional)</string>
 
     <!-- Notifications & Correction Alert -->
     <string name="settings_notifications_title">Benachrichtigungen</string>

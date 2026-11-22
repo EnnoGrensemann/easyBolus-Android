@@ -423,8 +423,9 @@ fun SettingsScreen(
                 CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
                 CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
             }
+            val currentHour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
             val savedFactorDisplay = CarbFactorFormatter.formatDisplay(
-                settings.carbRatio,
+                settings.carbRatioForHour(currentHour),
                 settings.carbFactorMode,
                 locale
             )
@@ -611,7 +612,13 @@ fun SettingsScreen(
                     }
 
                     SettingsCategory.INSULIN_PEN -> {
-                        // Karte 1: Berechnungsfaktor & Grundwerte
+                        val activeFactorModeLabel = when (carbFactorMode) {
+                            CarbFactorMode.GRAMS_PER_IE -> stringResource(R.string.factor_mode_g_per_ie)
+                            CarbFactorMode.IE_PER_10G -> stringResource(R.string.factor_mode_ie_per_10g)
+                            CarbFactorMode.IE_PER_BE -> stringResource(R.string.factor_mode_ie_per_be)
+                        }
+
+                        // Karte 1: Berechnungsfaktor (Faktorvariante + Tagesfaktor ODER Stündliche Faktoren)
                         SettingsDetailCard {
                             Text(
                                 text = stringResource(R.string.settings_card_factors),
@@ -633,15 +640,121 @@ fun SettingsScreen(
                                 }
                             }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_hourly_carb_ratio),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_hourly_carb_ratio_sub),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Switch(
+                                    checked = useHourlyCarbRatio,
+                                    onCheckedChange = {
+                                        useHourlyCarbRatio = it
+                                        if (it) hourlyExpanded = true
+                                    }
+                                )
+                            }
+
+                            if (!useHourlyCarbRatio) {
                                 OutlinedTextField(
                                     value = carbRatio,
                                     onValueChange = { carbRatio = it },
                                     label = { Text(carbRatioLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                            } else {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { hourlyExpanded = !hourlyExpanded }
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            if (hourlyExpanded) R.string.settings_hourly_collapse
+                                            else R.string.settings_hourly_expand,
+                                            activeFactorModeLabel
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp
+                                    )
+                                    Icon(
+                                        imageVector = if (hourlyExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                AnimatedVisibility(visible = hourlyExpanded) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val firstHourValue = hourlyCarbRatios[0].ifBlank {
+                                            CarbFactorFormatter.formatInput(settings.carbRatio, carbFactorMode)
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                for (h in 0 until 24) {
+                                                    hourlyCarbRatios[h] = firstHourValue
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    R.string.settings_hourly_copy_base,
+                                                    "$firstHourValue $activeFactorModeLabel"
+                                                )
+                                            )
+                                        }
+
+                                        for (row in 0 until 8) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                for (col in 0 until 3) {
+                                                    val hour = row * 3 + col
+                                                    OutlinedTextField(
+                                                        value = hourlyCarbRatios[hour],
+                                                        onValueChange = { hourlyCarbRatios[hour] = it },
+                                                        label = { Text(String.format(locale, "%02d:00", hour)) },
+                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                        singleLine = true,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Karte 2: Korrektur, DIA, Basal, Insulin-Wirkprofil & Pen-Schrittweite
+                        SettingsDetailCard {
+                            Text(
+                                text = stringResource(R.string.settings_card_insulin_pen),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedTextField(
                                     value = isf,
                                     onValueChange = { isf = it },
@@ -656,9 +769,6 @@ fun SettingsScreen(
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedTextField(
                                     value = diaHours,
                                     onValueChange = { diaHours = it },
@@ -673,29 +783,21 @@ fun SettingsScreen(
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
-                                OutlinedTextField(
-                                    value = defaultBasal,
-                                    onValueChange = { defaultBasal = it },
-                                    label = {
-                                        Text(
-                                            stringResource(R.string.settings_default_basal, ieUnit),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f)
-                                )
                             }
-                        }
 
-                        // Karte 2: Insulin-Wirkprofil & Pen-Schrittweite
-                        SettingsDetailCard {
-                            Text(
-                                text = stringResource(R.string.settings_card_insulin_pen),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp
+                            OutlinedTextField(
+                                value = defaultBasal,
+                                onValueChange = { defaultBasal = it },
+                                label = {
+                                    Text(
+                                        stringResource(R.string.settings_default_basal, ieUnit),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             Text(
@@ -733,99 +835,6 @@ fun SettingsScreen(
                                     onClick = { penStep = 1.0 },
                                     label = { Text(stringResource(R.string.settings_pen_full)) }
                                 )
-                            }
-                        }
-
-                        // Karte 3: Stündlicher KH-Faktor
-                        SettingsDetailCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_hourly_carb_ratio),
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_hourly_carb_ratio_sub),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                Switch(
-                                    checked = useHourlyCarbRatio,
-                                    onCheckedChange = {
-                                        useHourlyCarbRatio = it
-                                        if (it) hourlyExpanded = true
-                                    }
-                                )
-                            }
-
-                            if (useHourlyCarbRatio) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { hourlyExpanded = !hourlyExpanded }
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = stringResource(
-                                            if (hourlyExpanded) R.string.settings_hourly_collapse
-                                            else R.string.settings_hourly_expand
-                                        ),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp
-                                    )
-                                    Icon(
-                                        imageVector = if (hourlyExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-
-                            AnimatedVisibility(visible = useHourlyCarbRatio && hourlyExpanded) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextButton(
-                                        onClick = {
-                                            val fillValue = carbRatio.ifBlank {
-                                                CarbFactorFormatter.formatInput(settings.carbRatio, carbFactorMode)
-                                            }
-                                            for (h in 0 until 24) {
-                                                hourlyCarbRatios[h] = fillValue
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(stringResource(R.string.settings_hourly_copy_base, carbRatio))
-                                    }
-
-                                    for (row in 0 until 8) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            for (col in 0 until 3) {
-                                                val hour = row * 3 + col
-                                                OutlinedTextField(
-                                                    value = hourlyCarbRatios[hour],
-                                                    onValueChange = { hourlyCarbRatios[hour] = it },
-                                                    label = { Text(String.format(locale, "%02d:00", hour)) },
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                    singleLine = true,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

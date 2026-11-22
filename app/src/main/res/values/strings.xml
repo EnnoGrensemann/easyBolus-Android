@@ -111,15 +111,15 @@
     <string name="settings_factors_title">Insulin &amp; Pen</string>
     <string name="settings_carb_ratio">Carb ratio (g / 1 %1$s)</string>
     <string name="settings_isf">Correction factor (%1$s)</string>
-    <string name="settings_dia">Insulin duration DIA (h)</string>
+    <string name="settings_dia">DIA (h)</string>
     <string name="settings_insulin_profile">Insulin profile (IOB curve)</string>
     <string name="insulin_rapid_short">Rapid (75 min)</string>
     <string name="insulin_ultra_rapid_short">Ultra-rapid (55 min)</string>
-    <string name="settings_hourly_carb_ratio">Hourly carb ratio</string>
-    <string name="settings_hourly_carb_ratio_sub">Set an individual carb ratio for each hour (00–23)</string>
-    <string name="settings_hourly_expand">Edit 24-hour values</string>
-    <string name="settings_hourly_collapse">Collapse 24-hour values</string>
-    <string name="settings_hourly_copy_base">Apply base carb ratio (%1$s) to all hours</string>
+    <string name="settings_hourly_carb_ratio">Hourly factors</string>
+    <string name="settings_hourly_carb_ratio_sub">Set an individual factor for each hour (00–23)</string>
+    <string name="settings_hourly_expand">Edit 24-hour factors (%1$s)</string>
+    <string name="settings_hourly_collapse">Collapse 24-hour factors (%1$s)</string>
+    <string name="settings_hourly_copy_base">Apply 00:00 value (%1$s) to all hours</string>
     <string name="settings_target_pen_title">Target Values</string>
     <string name="settings_target_bg">Target BG (%1$s)</string>
     <string name="settings_range_min">Target range min (%1$s)</string>
@@ -139,14 +139,14 @@
     <string name="settings_saved_feedback">Settings saved</string>
 
     <!-- Carb Factor Modes & Default Basal -->
-    <string name="settings_carb_factor_mode">Carb factor format</string>
+    <string name="settings_carb_factor_mode">Bolus factor format</string>
     <string name="factor_mode_g_per_ie">Carbs/U</string>
     <string name="factor_mode_ie_per_10g">U/10g</string>
     <string name="factor_mode_ie_per_be">U/12g (BE)</string>
-    <string name="settings_carb_ratio_g_per_ie">Carb ratio (g / 1 %1$s)</string>
-    <string name="settings_carb_ratio_ie_per_10g">Carb factor (%1$s / 10 g)</string>
-    <string name="settings_carb_ratio_ie_per_be">Carb factor (%1$s / 12 g BE)</string>
-    <string name="settings_default_basal">Default basal dose (%1$s, optional)</string>
+    <string name="settings_carb_ratio_g_per_ie">Daily factor (g carbs / 1 %1$s)</string>
+    <string name="settings_carb_ratio_ie_per_10g">Daily factor (%1$s / 10 g)</string>
+    <string name="settings_carb_ratio_ie_per_be">Daily factor (%1$s / 12 g BE)</string>
+    <string name="settings_default_basal">Default basal (%1$s, optional)</string>
 
     <!-- Notifications & Correction Alert -->
     <string name="settings_notifications_title">Notifications</string>
