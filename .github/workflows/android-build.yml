@@ -49,16 +49,20 @@ jobs:
           if [ "${{ steps.keystore.outputs.has_keystore }}" = "true" ]; then
             gradle testDebugUnitTest assembleRelease --no-daemon
             cp app/build/outputs/apk/release/app-release.apk "${{ runner.temp }}/easyBOLUS.apk"
+            cp wear/build/outputs/apk/release/wear-release.apk "${{ runner.temp }}/easyBOLUS-wear.apk"
           else
             gradle testDebugUnitTest assembleDebug --no-daemon
             cp app/build/outputs/apk/debug/app-debug.apk "${{ runner.temp }}/easyBOLUS.apk"
+            cp wear/build/outputs/apk/debug/wear-debug.apk "${{ runner.temp }}/easyBOLUS-wear.apk"
           fi
 
-      - name: Upload easyBOLUS APK
+      - name: Upload easyBOLUS APKs
         uses: actions/upload-artifact@v4
         with:
-          name: easyBOLUS-apk
-          path: ${{ runner.temp }}/easyBOLUS.apk
+          name: easyBOLUS-apks
+          path: |
+            ${{ runner.temp }}/easyBOLUS.apk
+            ${{ runner.temp }}/easyBOLUS-wear.apk
 
       - name: Read app versionName
         id: version
@@ -66,10 +70,12 @@ jobs:
           VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
           echo "name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release (für Obtainium)
+      - name: Publish GitHub Release (für Obtainium & Wear OS)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
           name: easyBOLUS v${{ steps.version.outputs.name }}
           make_latest: true
-          files: ${{ runner.temp }}/easyBOLUS.apk
+          files: |
+            ${{ runner.temp }}/easyBOLUS.apk
+            ${{ runner.temp }}/easyBOLUS-wear.apk

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">easyBOLUS</string>
+    <string name="unit_ie">U</string>
+    <string name="complication_glucose_label">Glucose &amp; Trend</string>
+    <string name="complication_glucose_cd">Blood glucose</string>
+    <string name="complication_iob_cob_label">IOB &amp; COB</string>
+    <string name="complication_iob_cob_cd">Active insulin and carbs</string>
+    <string name="wear_waiting">Waiting for phone…</string>
+    <string name="wear_just_now">just now</string>
+    <string name="wear_minutes_ago">%1$dm ago</string>
+    <string name="wear_hours_ago">%1$dh ago</string>
+    <string name="wear_btn_sync">Refresh</string>
+    <string name="wear_sync_requested">Syncing…</string>
+</resources>

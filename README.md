@@ -1,6 +1,6 @@
 # easyBOLUS
 
-**Version 1.1.2** · Entwickelt vollständig mit **Antigravity**
+**Version 1.2.0** · Entwickelt vollständig mit **Antigravity**
 
 Eine moderne, schlanke Android-App (Jetpack Compose / Material 3) zur schnellen Bolus-Berechnung, Dokumentation von Kohlenhydraten, Bolus- & Basal-Insulin, detaillierten Berichten (TIR & AGP) sowie zur Live-Anzeige von CGM-Glukosewerten aus **Juggluco / xDrip** – oder komplett manuell ohne Sensor.
 
@@ -77,6 +77,16 @@ easyBOLUS empfängt Glukosewerte lokal auf dem Gerät über Android-Broadcasts. 
 5. Nach dem nächsten Sensor-Wert (in der Regel innerhalb von 1–5 Minuten) erscheint der aktuelle Glukosewert automatisch auf dem Dashboard, im Widget und in der Statusleiste.
 
 > **Kein Sensor vorhanden?** Unter **Einstellungen → Sensor-Anbindung & Testdaten** lässt sich der Broadcast einfach deaktivieren – dann stehen direkte Eingabefelder für manuelle Blutzuckerwerte bereit. Zum Ausprobieren lassen sich dort außerdem **Demo-Daten** laden und wieder löschen.
+
+---
+
+## Smartwatch (Wear OS / Samsung Galaxy Watch)
+
+Ab **Version 1.2.0** enthält jedes GitHub Release zusätzlich die Companion-App **`easyBOLUS-wear.apk`** für Wear-OS-Uhren (z. B. Samsung Galaxy Watch 4/5/6/7, Pixel Watch):
+
+- **Complication „Blutzucker & Trend“**: Unterstützt Kurztext (`114 →` + `Δ +2`), farbiges Icon (`SMALL_IMAGE` im Stil von GlucoDataHandler inkl. Always-On-Modus), Bogenanzeige (`RANGED_VALUE`) und Langtext (`114 → Δ +2` + `IOB · COB`).
+- **Complication „IOB & COB“**: Optionales zweites Feld für aktives Insulin & aktive Kohlenhydrate.
+- **Installation auf der Uhr:** Lade `easyBOLUS-wear.apk` aus dem aktuellen GitHub Release herunter und installiere sie über WLAN-Debugging auf der Uhr (z. B. mit **Wear Installer 2**, **GeminiMan WearOS Manager** oder `adb install`). Anschließend stehen die Complications direkt im Zifferblatt-Editor zur Auswahl.
 
 ---
 

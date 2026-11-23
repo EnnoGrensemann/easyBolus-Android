@@ -118,6 +118,22 @@ object EasyBolusNotifier {
             atTimeMillis = now,
             absorptionHours = settings.carbAbsorptionHours
         )
+        val deltaMgDl = latest?.let { cur ->
+            val prev = recentReadings.lastOrNull { it.timestampMillis < cur.timestampMillis }
+            if (prev != null && (cur.timestampMillis - prev.timestampMillis) <= 30 * 60_000L) {
+                cur.mgDl - prev.mgDl
+            } else null
+        }
+
+        // Live-Daten sofort an verbundene Wear-OS-Smartwatch pushen (z. B. Galaxy Watch 6)
+        de.easybolus.wear.WearDataSync.syncNow(
+            context = context,
+            latest = latest,
+            deltaMgDl = deltaMgDl,
+            iob = iob,
+            cob = cob,
+            settings = settings
+        )
 
         val nm = NotificationManagerCompat.from(context)
         val hasPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -147,12 +163,6 @@ object EasyBolusNotifier {
                 latest.mgDl < settings.targetRangeMin -> COLOR_LOW
                 latest.mgDl > settings.targetRangeMax -> COLOR_HIGH
                 else -> COLOR_IN_RANGE
-            }
-            val deltaMgDl = latest?.let { cur ->
-                val prev = recentReadings.lastOrNull { it.timestampMillis < cur.timestampMillis }
-                if (prev != null && (cur.timestampMillis - prev.timestampMillis) <= 30 * 60_000L) {
-                    cur.mgDl - prev.mgDl
-                } else null
             }
             val deltaText = if (!isStaleCgm && deltaMgDl != null) {
                 "Δ ${GlucoseFormatter.formatSignedDelta(deltaMgDl, unit, locale)}"

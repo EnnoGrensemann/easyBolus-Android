@@ -47,6 +47,19 @@
                 android:resource="@xml/easybolus_widget_info" />
         </receiver>
 
+        <!-- Reagiert auf manuelle Sync-Anfragen der Wear-OS-Smartwatch -->
+        <service
+            android:name=".wear.WearRequestListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/easybolus"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
         <!-- FileProvider für CSV- & JSON-Export -->
         <provider
             android:name="androidx.core.content.FileProvider"
