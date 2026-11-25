@@ -40,7 +40,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.rememberCoroutineScope
+import de.easybolus.data.sync.GoogleAccountInfo
 import de.easybolus.data.sync.GoogleAuthManager
+import de.easybolus.data.sync.SignInOutcome
 import de.easybolus.domain.CsvExporter
 import de.easybolus.ui.MainViewModel
 import de.easybolus.ui.account.AccountPopupDialog
@@ -93,6 +95,27 @@ private fun EasyBolusRoot(
     var isDriveBusy by remember { mutableStateOf(false) }
     var pendingDriveAction by remember { mutableStateOf<String?>(null) } // "BACKUP" or "RESTORE"
     var bolusReminder by remember { mutableStateOf<BolusReminderData?>(null) }
+
+    val signInResolutionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        val token = if (activityResult.resultCode == Activity.RESULT_OK) {
+            GoogleAuthManager.extractTokenFromIntent(context, activityResult.data)
+        } else {
+            null
+        }
+        if (token.isNullOrBlank()) {
+            isDriveBusy = false
+            return@rememberLauncherForActivityResult
+        }
+        coroutineScope.launch {
+            val info = GoogleAuthManager.fetchUserInfo(token).getOrElse {
+                GoogleAccountInfo(email = "Google-Konto", displayName = null, photoUrl = null)
+            }
+            viewModel.onGoogleSignedIn(info.email, info.displayName, info.photoUrl)
+            isDriveBusy = false
+        }
+    }
 
     val driveResolutionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -275,16 +298,24 @@ private fun EasyBolusRoot(
                 onSignIn = {
                     isDriveBusy = true
                     coroutineScope.launch {
-                        val res = GoogleAuthManager.signIn(activity)
-                        isDriveBusy = false
-                        res.onSuccess { info ->
-                            viewModel.onGoogleSignedIn(info.email, info.displayName, info.photoUrl)
-                        }.onFailure { err ->
-                            Toast.makeText(
-                                context,
-                                err.localizedMessage ?: "Sign-in failed",
-                                Toast.LENGTH_LONG
-                            ).show()
+                        when (val outcome = GoogleAuthManager.signIn(activity)) {
+                            is SignInOutcome.Success -> {
+                                isDriveBusy = false
+                                viewModel.onGoogleSignedIn(
+                                    outcome.account.email,
+                                    outcome.account.displayName,
+                                    outcome.account.photoUrl
+                                )
+                            }
+                            is SignInOutcome.NeedsResolution -> {
+                                signInResolutionLauncher.launch(
+                                    IntentSenderRequest.Builder(outcome.pendingIntent.intentSender).build()
+                                )
+                            }
+                            is SignInOutcome.Error -> {
+                                isDriveBusy = false
+                                Toast.makeText(context, outcome.message, Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 },

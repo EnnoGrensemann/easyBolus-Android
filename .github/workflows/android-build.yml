@@ -45,6 +45,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          EASYBOLUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EASYBOLUS_GOOGLE_WEB_CLIENT_ID }}
         run: |
           if [ "${{ steps.keystore.outputs.has_keystore }}" = "true" ]; then
             gradle testDebugUnitTest assembleRelease --no-daemon
