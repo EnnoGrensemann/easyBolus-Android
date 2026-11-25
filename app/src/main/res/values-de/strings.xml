@@ -216,4 +216,62 @@
     <string name="settings_summary_backup">Einstellungen, CSV &amp; Komplett-Backup</string>
     <string name="settings_card_factors">Berechnungsfaktor</string>
     <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
+
+    <!-- Google Account & Drive Sync -->
+    <string name="account_button_cd">Google-Konto &amp; Backup</string>
+    <string name="account_popup_title">Google Drive Backup</string>
+    <string name="account_not_signed_in">Nicht angemeldet</string>
+    <string name="account_sign_in_hint">Sichere Messwerte, Tagebuch &amp; Einstellungen optional als sichtbare Datei (easybolus_backup.json) in deinem Google Drive.</string>
+    <string name="account_sign_in_google">Mit Google anmelden</string>
+    <string name="account_sign_out">Abmelden</string>
+    <string name="btn_close">Schließen</string>
+    <string name="account_auto_sync">Auto-Sync</string>
+    <string name="account_auto_sync_sub">Gedrosselt bei Änderungen im Hintergrund sichern</string>
+    <string name="account_sync_now">Jetzt sichern</string>
+    <string name="account_restore_now">Wiederherstellen</string>
+    <string name="account_status_syncing">Synchronisiert…</string>
+    <string name="account_status_never">Noch nie gesichert</string>
+    <string name="account_status_last_sync">Zuletzt gesichert: %1$s</string>
+    <string name="account_status_error">Fehler: %1$s</string>
+    <string name="account_backup_ok">Backup in Google Drive gespeichert</string>
+    <string name="account_restore_ok">Wiederhergestellt: +%1$d Messwerte, +%2$d Einträge</string>
+    <string name="drive_missing_web_client_id">Google OAuth Web-Client-ID fehlt (siehe docs/GOOGLE_DRIVE_SETUP.md).</string>
+
+    <!-- Extended Reports: Tagesberichte & Mehr Details -->
+    <string name="reports_daily_title">Tagesberichte</string>
+    <string name="reports_daily_prev_cd">Vorheriger Tag</string>
+    <string name="reports_daily_next_cd">Nächster Tag</string>
+    <string name="reports_daily_empty">Keine Messwerte für diesen Tag vorhanden.</string>
+    <string name="reports_daily_tir">Im Zielbereich</string>
+    <string name="reports_daily_basal">Basal</string>
+    <string name="reports_details_title">Mehr Details</string>
+    <string name="reports_details_tod_title">Glukose nach Tageszeit</string>
+    <string name="reports_tod_night">00–06</string>
+    <string name="reports_tod_morning">06–12</string>
+    <string name="reports_tod_afternoon">12–18</string>
+    <string name="reports_tod_evening">18–24</string>
+    <string name="reports_details_hypo_title">Hypoglykämie-Ereignisse</string>
+    <string name="reports_hypo_events">Niedrig (&lt; %1$s)</string>
+    <string name="reports_very_low_events">Stark niedrig (&lt; %1$s)</string>
+    <string name="reports_hypo_night_day">Nacht / Tag</string>
+    <string name="reports_hypo_lowest">Tiefster Wert</string>
+    <string name="reports_details_therapy_title">Insulin &amp; Kohlenhydrate</string>
+    <string name="reports_basal_day">Ø Basal/Tag</string>
+    <string name="reports_total_insulin_day">Ø Gesamt/Tag</string>
+    <string name="reports_bolus_per_day">Boli/Tag</string>
+    <string name="reports_avg_bolus">Ø Bolus</string>
+    <string name="reports_details_variability_title">Variabilität &amp; Sensor</string>
+    <string name="reports_sd">Standardabw. (SD)</string>
+    <string name="reports_min_max">Min / Max</string>
+    <string name="reports_sensor_active">Sensor aktiv</string>
+    <string name="reports_pattern_title">Wichtigstes Muster</string>
+    <string name="reports_pattern_low">Niedrige Werte</string>
+    <string name="reports_pattern_high">Hohe Werte</string>
+    <string name="reports_pattern_in_range">Stabil im Zielbereich</string>
+    <string name="reports_tod_night_label">Über Nacht</string>
+    <string name="reports_tod_morning_label">Morgens</string>
+    <string name="reports_tod_afternoon_label">Nachmittags</string>
+    <string name="reports_tod_evening_label">Abends</string>
+    <string name="reports_sparklines_title">Tägliche Glukoseprofile (letzte 7 Tage)</string>
+    <string name="reports_hourly_minmax_title">Stündlich Max / Min</string>
 </resources>

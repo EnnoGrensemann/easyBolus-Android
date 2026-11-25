@@ -216,4 +216,62 @@
     <string name="settings_summary_backup">Settings, CSV &amp; full backup</string>
     <string name="settings_card_factors">Calculation factors</string>
     <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
+
+    <!-- Google Account & Drive Sync -->
+    <string name="account_button_cd">Google account &amp; backup</string>
+    <string name="account_popup_title">Google Drive Backup</string>
+    <string name="account_not_signed_in">Not signed in</string>
+    <string name="account_sign_in_hint">Optionally back up readings, diary &amp; settings as a visible file (easybolus_backup.json) in your Google Drive.</string>
+    <string name="account_sign_in_google">Sign in with Google</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="btn_close">Close</string>
+    <string name="account_auto_sync">Auto-Sync</string>
+    <string name="account_auto_sync_sub">Throttled background backup on changes</string>
+    <string name="account_sync_now">Back up now</string>
+    <string name="account_restore_now">Restore</string>
+    <string name="account_status_syncing">Syncing…</string>
+    <string name="account_status_never">Never backed up</string>
+    <string name="account_status_last_sync">Last backup: %1$s</string>
+    <string name="account_status_error">Error: %1$s</string>
+    <string name="account_backup_ok">Backup saved to Google Drive</string>
+    <string name="account_restore_ok">Restored: +%1$d readings, +%2$d entries</string>
+    <string name="drive_missing_web_client_id">Google OAuth Web Client ID is missing (see docs/GOOGLE_DRIVE_SETUP.md).</string>
+
+    <!-- Extended Reports: Daily Reports & More Details -->
+    <string name="reports_daily_title">Daily Reports</string>
+    <string name="reports_daily_prev_cd">Previous day</string>
+    <string name="reports_daily_next_cd">Next day</string>
+    <string name="reports_daily_empty">No glucose readings for this day.</string>
+    <string name="reports_daily_tir">In Range</string>
+    <string name="reports_daily_basal">Basal</string>
+    <string name="reports_details_title">More Details</string>
+    <string name="reports_details_tod_title">Glucose by Time of Day</string>
+    <string name="reports_tod_night">00–06</string>
+    <string name="reports_tod_morning">06–12</string>
+    <string name="reports_tod_afternoon">12–18</string>
+    <string name="reports_tod_evening">18–24</string>
+    <string name="reports_details_hypo_title">Hypoglycemia Events</string>
+    <string name="reports_hypo_events">Low (&lt; %1$s)</string>
+    <string name="reports_very_low_events">Very low (&lt; %1$s)</string>
+    <string name="reports_hypo_night_day">Night / Day</string>
+    <string name="reports_hypo_lowest">Lowest value</string>
+    <string name="reports_details_therapy_title">Insulin &amp; Carbs</string>
+    <string name="reports_basal_day">Avg Basal/day</string>
+    <string name="reports_total_insulin_day">Avg Total/day</string>
+    <string name="reports_bolus_per_day">Boluses/day</string>
+    <string name="reports_avg_bolus">Avg Bolus</string>
+    <string name="reports_details_variability_title">Variability &amp; Sensor</string>
+    <string name="reports_sd">Std. Dev. (SD)</string>
+    <string name="reports_min_max">Min / Max</string>
+    <string name="reports_sensor_active">Sensor active</string>
+    <string name="reports_pattern_title">Primary Pattern</string>
+    <string name="reports_pattern_low">Low Glucose</string>
+    <string name="reports_pattern_high">High Glucose</string>
+    <string name="reports_pattern_in_range">In Target Range</string>
+    <string name="reports_tod_night_label">Overnight</string>
+    <string name="reports_tod_morning_label">Morning</string>
+    <string name="reports_tod_afternoon_label">Afternoon</string>
+    <string name="reports_tod_evening_label">Evening</string>
+    <string name="reports_sparklines_title">Daily Glucose Profiles (last 7 days)</string>
+    <string name="reports_hourly_minmax_title">Hourly Max / Min</string>
 </resources>
