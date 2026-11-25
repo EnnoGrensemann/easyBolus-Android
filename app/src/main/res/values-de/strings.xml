@@ -242,7 +242,7 @@
     <string name="reports_daily_prev_cd">Vorheriger Tag</string>
     <string name="reports_daily_next_cd">Nächster Tag</string>
     <string name="reports_daily_empty">Keine Messwerte für diesen Tag vorhanden.</string>
-    <string name="reports_daily_tir">Im Zielbereich</string>
+    <string name="reports_daily_tir">TIR</string>
     <string name="reports_daily_basal">Basal</string>
     <string name="reports_details_title">Mehr Details</string>
     <string name="reports_details_tod_title">Glukose nach Tageszeit</string>
@@ -251,8 +251,8 @@
     <string name="reports_tod_afternoon">12–18</string>
     <string name="reports_tod_evening">18–24</string>
     <string name="reports_details_hypo_title">Hypoglykämie-Ereignisse</string>
-    <string name="reports_hypo_events">Niedrig (&lt; %1$s)</string>
-    <string name="reports_very_low_events">Stark niedrig (&lt; %1$s)</string>
+    <string name="reports_hypo_events">&lt; %1$s</string>
+    <string name="reports_very_low_events">&lt; %1$s</string>
     <string name="reports_hypo_night_day">Nacht / Tag</string>
     <string name="reports_hypo_lowest">Tiefster Wert</string>
     <string name="reports_details_therapy_title">Insulin &amp; Kohlenhydrate</string>
