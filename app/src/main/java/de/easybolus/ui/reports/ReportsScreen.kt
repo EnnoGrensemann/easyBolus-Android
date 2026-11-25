@@ -653,10 +653,7 @@ private fun OverviewMetricsCard(
                 )
                 ReportMetricTile(
                     label = stringResource(R.string.stat_gmi),
-                    value = summary.gmiPercent?.let { pct ->
-                        val mmolPart = summary.gmiMmolMol?.let { " · ${it.roundToInt()} mmol/mol" }.orEmpty()
-                        String.format(locale, "%.1f%%%s", pct, mmolPart)
-                    } ?: "--",
+                    value = summary.gmiPercent?.let { String.format(locale, "%.1f%%", it) } ?: "--",
                     modifier = Modifier.weight(1f)
                 )
                 ReportMetricTile(
