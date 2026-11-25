@@ -217,25 +217,14 @@
     <string name="settings_card_factors">Berechnungsfaktor</string>
     <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
 
-    <!-- Google Account & Drive Sync -->
-    <string name="account_button_cd">Google-Konto &amp; Backup</string>
-    <string name="account_popup_title">Google Drive Backup</string>
-    <string name="account_not_signed_in">Nicht angemeldet</string>
-    <string name="account_sign_in_hint">Sichere Messwerte, Tagebuch &amp; Einstellungen optional als sichtbare Datei (easybolus_backup.json) in deinem Google Drive.</string>
-    <string name="account_sign_in_google">Mit Google anmelden</string>
-    <string name="account_sign_out">Abmelden</string>
-    <string name="btn_close">Schließen</string>
-    <string name="account_auto_sync">Auto-Sync</string>
-    <string name="account_auto_sync_sub">Gedrosselt bei Änderungen im Hintergrund sichern</string>
-    <string name="account_sync_now">Jetzt sichern</string>
-    <string name="account_restore_now">Wiederherstellen</string>
-    <string name="account_status_syncing">Synchronisiert…</string>
-    <string name="account_status_never">Noch nie gesichert</string>
-    <string name="account_status_last_sync">Zuletzt gesichert: %1$s</string>
-    <string name="account_status_error">Fehler: %1$s</string>
-    <string name="account_backup_ok">Backup in Google Drive gespeichert</string>
-    <string name="account_restore_ok">Wiederhergestellt: +%1$d Messwerte, +%2$d Einträge</string>
-    <string name="drive_missing_web_client_id">Google OAuth Web-Client-ID fehlt (siehe docs/GOOGLE_DRIVE_SETUP.md).</string>
+    <!-- Backup (Dateisystem & Drive-Teilen) -->
+    <string name="backup_full_card_title">Komplett-Backup (Daten &amp; Einstellungen)</string>
+    <string name="backup_full_card_desc">Sichert alle Glukosewerte, Tagebucheinträge und Einstellungen als JSON-Datei – ganz ohne Google-Konto in der App. Du kannst die Datei direkt über das Dateisystem oder den Teilen-Dialog in Google Drive speichern und von dort wiederherstellen.</string>
+    <string name="btn_backup_save_file">In Drive / Datei speichern</string>
+    <string name="btn_backup_send_drive">An Drive / App senden</string>
+    <string name="btn_backup_restore_file">Aus Datei / Drive wiederherstellen</string>
+    <string name="backup_other_card_title">Einstellungen &amp; CSV-Export</string>
+    <string name="backup_share_chooser_title">Backup senden an</string>
 
     <!-- Extended Reports: Tagesberichte & Mehr Details -->
     <string name="reports_daily_title">Tagesberichte</string>

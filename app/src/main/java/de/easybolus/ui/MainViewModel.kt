@@ -60,10 +60,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = EasyBolusDatabase.getInstance(application).dao()
     private val settingsRepo = SettingsRepository(application)
-    private val driveSyncPrefs = de.easybolus.data.sync.DriveSyncPreferences(application)
-
-    val driveSyncState: StateFlow<de.easybolus.data.sync.DriveSyncState> = driveSyncPrefs.syncStateFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), de.easybolus.data.sync.DriveSyncState())
 
     private val tickerFlow = flow {
         while (true) {
@@ -242,7 +238,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = true)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -304,7 +299,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -338,7 +332,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 de.easybolus.notification.EasyBolusNotifier.resetCorrectionTimerOnBolus(getApplication())
             }
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -346,7 +339,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dao.updateDiaryEntry(entry)
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -354,7 +346,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dao.deleteDiaryEntry(entry)
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -362,7 +353,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsRepo.updateSettings(newSettings)
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
         }
     }
 
@@ -405,71 +395,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 dao.insertDiaryEntries(diff.newEntries)
             }
             de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
-            de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
             onResult(true, diff.newReadings.size, diff.newEntries.size)
-        }
-    }
-
-    fun onGoogleSignedIn(email: String, displayName: String?, photoUrl: String?) {
-        viewModelScope.launch {
-            driveSyncPrefs.setAccount(email, displayName, photoUrl)
-        }
-    }
-
-    fun setAutoSyncEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            driveSyncPrefs.setAutoSyncEnabled(enabled)
-            if (enabled) {
-                de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(getApplication())
-            }
-        }
-    }
-
-    fun signOutGoogle() {
-        viewModelScope.launch {
-            de.easybolus.data.sync.GoogleAuthManager.signOut(getApplication())
-            driveSyncPrefs.clearAccount()
-        }
-    }
-
-    fun backupToDriveNow(
-        accessTokenOverride: String? = null,
-        onNeedsResolution: (android.app.PendingIntent) -> Unit,
-        onFinished: (Boolean, String?) -> Unit
-    ) {
-        viewModelScope.launch {
-            when (val res = de.easybolus.data.sync.DriveSyncManager.performBackup(getApplication(), accessTokenOverride)) {
-                is de.easybolus.data.sync.DriveAuthTokenResult.Success -> onFinished(true, null)
-                is de.easybolus.data.sync.DriveAuthTokenResult.NeedsResolution -> onNeedsResolution(res.pendingIntent)
-                is de.easybolus.data.sync.DriveAuthTokenResult.Error -> onFinished(false, res.message)
-            }
-        }
-    }
-
-    fun restoreFromDriveNow(
-        accessTokenOverride: String? = null,
-        onNeedsResolution: (android.app.PendingIntent) -> Unit,
-        onFinished: (de.easybolus.data.sync.ManualRestoreSummary) -> Unit
-    ) {
-        viewModelScope.launch {
-            val token = if (!accessTokenOverride.isNullOrBlank()) {
-                accessTokenOverride
-            } else {
-                when (val tokenRes = de.easybolus.data.sync.GoogleAuthManager.requestDriveAccessToken(getApplication())) {
-                    is de.easybolus.data.sync.DriveAuthTokenResult.Success -> tokenRes.accessToken
-                    is de.easybolus.data.sync.DriveAuthTokenResult.NeedsResolution -> {
-                        onNeedsResolution(tokenRes.pendingIntent)
-                        return@launch
-                    }
-                    is de.easybolus.data.sync.DriveAuthTokenResult.Error -> {
-                        driveSyncPrefs.updateSyncStatus(de.easybolus.data.sync.SyncStatus.ERROR, tokenRes.message)
-                        onFinished(de.easybolus.data.sync.ManualRestoreSummary(false, errorMessage = tokenRes.message))
-                        return@launch
-                    }
-                }
-            }
-            val result = de.easybolus.data.sync.DriveSyncManager.performRestoreMerge(getApplication(), token)
-            onFinished(result)
         }
     }
 

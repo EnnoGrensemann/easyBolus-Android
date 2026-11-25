@@ -34,18 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.app.Activity
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.rememberCoroutineScope
-import de.easybolus.data.sync.GoogleAccountInfo
-import de.easybolus.data.sync.GoogleAuthManager
-import de.easybolus.data.sync.SignInOutcome
 import de.easybolus.domain.CsvExporter
 import de.easybolus.ui.MainViewModel
-import de.easybolus.ui.account.AccountPopupDialog
 import de.easybolus.ui.bolus.BolusAndEntrySheet
 import de.easybolus.ui.bolus.BolusReminderData
 import de.easybolus.ui.bolus.BolusReminderDialog
@@ -55,7 +45,6 @@ import de.easybolus.ui.reports.ReportsScreen
 import de.easybolus.ui.settings.SettingsScreen
 import de.easybolus.ui.theme.EasyBolusTheme
 import de.easybolus.ui.theme.isEasyBolusDarkTheme
-import kotlinx.coroutines.launch
 
 private enum class AppScreen {
     HOME, DIARY, REPORTS, SETTINGS
@@ -82,82 +71,14 @@ private fun EasyBolusRoot(
     viewModel: MainViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val homeState by viewModel.homeUiState.collectAsState()
     val diaryEntries by viewModel.allDiaryEntries.collectAsState()
     val reportReadings by viewModel.reportReadings90d.collectAsState()
     val settings by viewModel.settingsFlow.collectAsState()
-    val driveSyncState by viewModel.driveSyncState.collectAsState()
 
     var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
     var showBolusSheet by remember { mutableStateOf(false) }
-    var showAccountPopup by remember { mutableStateOf(false) }
-    var isDriveBusy by remember { mutableStateOf(false) }
-    var pendingDriveAction by remember { mutableStateOf<String?>(null) } // "BACKUP" or "RESTORE"
     var bolusReminder by remember { mutableStateOf<BolusReminderData?>(null) }
-
-    val signInResolutionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { activityResult ->
-        val token = if (activityResult.resultCode == Activity.RESULT_OK) {
-            GoogleAuthManager.extractTokenFromIntent(context, activityResult.data)
-        } else {
-            null
-        }
-        if (token.isNullOrBlank()) {
-            isDriveBusy = false
-            return@rememberLauncherForActivityResult
-        }
-        coroutineScope.launch {
-            val info = GoogleAuthManager.fetchUserInfo(token).getOrElse {
-                GoogleAccountInfo(email = "Google-Konto", displayName = null, photoUrl = null)
-            }
-            viewModel.onGoogleSignedIn(info.email, info.displayName, info.photoUrl)
-            isDriveBusy = false
-        }
-    }
-
-    val driveResolutionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { activityResult ->
-        val token = if (activityResult.resultCode == Activity.RESULT_OK) {
-            GoogleAuthManager.extractTokenFromIntent(context, activityResult.data)
-        } else {
-            null
-        }
-        val action = pendingDriveAction
-        pendingDriveAction = null
-        if (token.isNullOrBlank()) {
-            isDriveBusy = false
-            return@rememberLauncherForActivityResult
-        }
-        when (action) {
-            "BACKUP" -> viewModel.backupToDriveNow(
-                accessTokenOverride = token,
-                onNeedsResolution = { isDriveBusy = false },
-                onFinished = { ok, err ->
-                    isDriveBusy = false
-                    val msg = if (ok) context.getString(R.string.account_backup_ok)
-                    else err ?: "Backup failed"
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                }
-            )
-            "RESTORE" -> viewModel.restoreFromDriveNow(
-                accessTokenOverride = token,
-                onNeedsResolution = { isDriveBusy = false },
-                onFinished = { summary ->
-                    isDriveBusy = false
-                    val msg = if (summary.success) {
-                        context.getString(R.string.account_restore_ok, summary.addedReadings, summary.addedEntries)
-                    } else {
-                        summary.errorMessage ?: "Restore failed"
-                    }
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                }
-            )
-            else -> isDriveBusy = false
-        }
-    }
 
     val isDark = isEasyBolusDarkTheme(settings.themeMode)
 
@@ -247,9 +168,7 @@ private fun EasyBolusRoot(
             when (currentScreen) {
                 AppScreen.HOME -> HomeScreen(
                     uiState = homeState,
-                    driveSyncState = driveSyncState,
                     onSaveManualGlucose = { mgDl -> viewModel.saveManualGlucose(mgDl) },
-                    onOpenAccount = { showAccountPopup = true },
                     onOpenSettings = { currentScreen = AppScreen.SETTINGS },
                     modifier = bottomModifier
                 )
@@ -288,77 +207,6 @@ private fun EasyBolusRoot(
                     modifier = Modifier.fillMaxSize()
                 )
             }
-        }
-
-        if (showAccountPopup) {
-            AccountPopupDialog(
-                syncState = driveSyncState,
-                isBusy = isDriveBusy,
-                onDismiss = { showAccountPopup = false },
-                onSignIn = {
-                    isDriveBusy = true
-                    coroutineScope.launch {
-                        when (val outcome = GoogleAuthManager.signIn(activity)) {
-                            is SignInOutcome.Success -> {
-                                isDriveBusy = false
-                                viewModel.onGoogleSignedIn(
-                                    outcome.account.email,
-                                    outcome.account.displayName,
-                                    outcome.account.photoUrl
-                                )
-                            }
-                            is SignInOutcome.NeedsResolution -> {
-                                signInResolutionLauncher.launch(
-                                    IntentSenderRequest.Builder(outcome.pendingIntent.intentSender).build()
-                                )
-                            }
-                            is SignInOutcome.Error -> {
-                                isDriveBusy = false
-                                Toast.makeText(context, outcome.message, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                },
-                onSignOut = {
-                    viewModel.signOutGoogle()
-                },
-                onToggleAutoSync = { enabled ->
-                    viewModel.setAutoSyncEnabled(enabled)
-                },
-                onBackupNow = {
-                    isDriveBusy = true
-                    viewModel.backupToDriveNow(
-                        onNeedsResolution = { pending ->
-                            pendingDriveAction = "BACKUP"
-                            driveResolutionLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
-                        },
-                        onFinished = { ok, err ->
-                            isDriveBusy = false
-                            val msg = if (ok) context.getString(R.string.account_backup_ok)
-                            else err ?: "Backup failed"
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                },
-                onRestoreNow = {
-                    isDriveBusy = true
-                    viewModel.restoreFromDriveNow(
-                        onNeedsResolution = { pending ->
-                            pendingDriveAction = "RESTORE"
-                            driveResolutionLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
-                        },
-                        onFinished = { summary ->
-                            isDriveBusy = false
-                            val msg = if (summary.success) {
-                                context.getString(R.string.account_restore_ok, summary.addedReadings, summary.addedEntries)
-                            } else {
-                                summary.errorMessage ?: "Restore failed"
-                            }
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                        }
-                    )
-                }
-            )
         }
 
         if (showBolusSheet) {

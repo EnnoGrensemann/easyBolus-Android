@@ -66,9 +66,7 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    driveSyncState: de.easybolus.data.sync.DriveSyncState,
     onSaveManualGlucose: (mgDl: Int) -> Unit,
-    onOpenAccount: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -88,18 +86,14 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        // 0. Konto-Profilbild oben links & Einstellungen-Zahnrad oben rechts (nur auf dem Dashboard)
+        // 0. Dezentes Einstellungen-Icon oben rechts (nur auf dem Dashboard)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(start = 12.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            de.easybolus.ui.account.AccountAvatarButton(
-                syncState = driveSyncState,
-                onClick = onOpenAccount
-            )
             IconButton(
                 onClick = onOpenSettings,
                 modifier = Modifier.size(40.dp)

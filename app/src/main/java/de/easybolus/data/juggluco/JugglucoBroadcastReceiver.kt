@@ -33,7 +33,6 @@ class JugglucoBroadcastReceiver : BroadcastReceiver() {
                 if (SettingsRepository(context).isJugglucoEnabled()) {
                     EasyBolusDatabase.getInstance(context).dao().insertGlucoseReading(reading)
                     EasyBolusNotifier.refreshAll(context, evaluateCorrection = true)
-                    de.easybolus.data.sync.DriveSyncManager.scheduleAutoSyncAsync(context)
                 }
             } finally {
                 pendingResult.finish()

@@ -15,14 +15,9 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = runNumber
-        versionName = "1.2.4"
+        versionName = "1.2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val webClientId = (project.findProperty("EASYBOLUS_GOOGLE_WEB_CLIENT_ID") as String?)
-            ?: System.getenv("EASYBOLUS_GOOGLE_WEB_CLIENT_ID")
-            ?: ""
-        resValue("string", "google_web_client_id", webClientId)
     }
 
     signingConfigs {
@@ -80,11 +75,6 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
-    implementation(libs.play.services.auth)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.play.services.wearable)
 

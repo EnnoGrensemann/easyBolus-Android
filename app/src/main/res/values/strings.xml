@@ -217,25 +217,14 @@
     <string name="settings_card_factors">Calculation factors</string>
     <string name="settings_card_insulin_pen">Insulin &amp; Pen</string>
 
-    <!-- Google Account & Drive Sync -->
-    <string name="account_button_cd">Google account &amp; backup</string>
-    <string name="account_popup_title">Google Drive Backup</string>
-    <string name="account_not_signed_in">Not signed in</string>
-    <string name="account_sign_in_hint">Optionally back up readings, diary &amp; settings as a visible file (easybolus_backup.json) in your Google Drive.</string>
-    <string name="account_sign_in_google">Sign in with Google</string>
-    <string name="account_sign_out">Sign out</string>
-    <string name="btn_close">Close</string>
-    <string name="account_auto_sync">Auto-Sync</string>
-    <string name="account_auto_sync_sub">Throttled background backup on changes</string>
-    <string name="account_sync_now">Back up now</string>
-    <string name="account_restore_now">Restore</string>
-    <string name="account_status_syncing">Syncing…</string>
-    <string name="account_status_never">Never backed up</string>
-    <string name="account_status_last_sync">Last backup: %1$s</string>
-    <string name="account_status_error">Error: %1$s</string>
-    <string name="account_backup_ok">Backup saved to Google Drive</string>
-    <string name="account_restore_ok">Restored: +%1$d readings, +%2$d entries</string>
-    <string name="drive_missing_web_client_id">Google OAuth Web Client ID is missing (see docs/GOOGLE_DRIVE_SETUP.md).</string>
+    <!-- Backup (File system & Share to Drive) -->
+    <string name="backup_full_card_title">Full Backup (Data &amp; Settings)</string>
+    <string name="backup_full_card_desc">Saves all glucose readings, diary entries, and settings as a JSON file — no Google account needed in the app. You can save or share the file directly to Google Drive via the Android file picker or share sheet and restore it from there.</string>
+    <string name="btn_backup_save_file">Save to Drive / File</string>
+    <string name="btn_backup_send_drive">Send to Drive / App</string>
+    <string name="btn_backup_restore_file">Restore from File / Drive</string>
+    <string name="backup_other_card_title">Settings &amp; CSV Export</string>
+    <string name="backup_share_chooser_title">Send backup to</string>
 
     <!-- Extended Reports: Daily Reports & More Details -->
     <string name="reports_daily_title">Daily Reports</string>

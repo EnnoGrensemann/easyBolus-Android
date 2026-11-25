@@ -1034,7 +1034,71 @@ fun SettingsScreen(
                     }
 
                     SettingsCategory.BACKUP -> {
+                        val chooserTitle = stringResource(R.string.backup_share_chooser_title)
                         SettingsDetailCard {
+                            Text(
+                                text = stringResource(R.string.backup_full_card_title),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.backup_full_card_desc),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Button(
+                                onClick = { exportFullJsonLauncher.launch("easyBOLUS_backup_$dateStamp.json") },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.btn_backup_save_file))
+                            }
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = {
+                                    onRequestFullBackupJson { json ->
+                                        runCatching {
+                                            val exportDir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+                                            val file = java.io.File(exportDir, "easyBOLUS_backup_$dateStamp.json")
+                                            file.writeText(json, Charsets.UTF_8)
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                file
+                                            )
+                                            val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "application/json"
+                                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, "easyBOLUS_backup_$dateStamp.json")
+                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(
+                                                android.content.Intent.createChooser(sendIntent, chooserTitle)
+                                            )
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.btn_backup_send_drive))
+                            }
+                            OutlinedButton(
+                                onClick = { importFullJsonLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.btn_backup_restore_file))
+                            }
+                        }
+
+                        SettingsDetailCard {
+                            Text(
+                                text = stringResource(R.string.backup_other_card_title),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedButton(
                                     onClick = { exportSettingsLauncher.launch("easyBOLUS_settings_$dateStamp.json") },
@@ -1065,31 +1129,6 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(stringResource(R.string.btn_export_full_csv))
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(
-                                    onClick = { exportFullJsonLauncher.launch("easyBOLUS_backup_$dateStamp.json") },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        stringResource(R.string.btn_export_full_json),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = { importFullJsonLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        stringResource(R.string.btn_import_full_json),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontSize = 12.sp
-                                    )
-                                }
                             }
                         }
                     }
