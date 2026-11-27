@@ -225,6 +225,15 @@ private fun EasyBolusRoot(
                         )
                     }
                 },
+                onSaveSplitBolus = { part1, part2, delayMinutes, carbs, note, bg, timestampMillis ->
+                    viewModel.saveSplitBolus(part1, part2, delayMinutes, carbs, note, bg, timestampMillis)
+                    if (part1 > 0.0) {
+                        bolusReminder = BolusReminderData(
+                            bolusUnits = part1,
+                            carbsGrams = carbs.takeIf { it > 0.0 }
+                        )
+                    }
+                },
                 onAddQuickEntry = { type, bolus, carbs, basal, note, timestampMillis ->
                     viewModel.addQuickEntry(type, bolus, carbs, basal, note, timestampMillis)
                     if (bolus != null && bolus > 0.0) {

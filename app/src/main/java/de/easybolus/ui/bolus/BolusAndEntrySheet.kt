@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
@@ -28,8 +29,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -63,8 +66,11 @@ import de.easybolus.data.settings.UserSettings
 import de.easybolus.domain.BolusCalculator
 import de.easybolus.domain.CarbFactorFormatter
 import de.easybolus.domain.GlucoseFormatter
+import de.easybolus.domain.SplitBolusCalculator
 import de.easybolus.ui.theme.CobPillBg
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -77,6 +83,7 @@ fun BolusAndEntrySheet(
     settings: UserSettings,
     onDismiss: () -> Unit,
     onSaveBolusAndCarbs: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?, timestampMillis: Long) -> Unit,
+    onSaveSplitBolus: (part1Units: Double, part2Units: Double, delayMinutes: Int, carbsGrams: Double, note: String?, bgAtTime: Int?, timestampMillis: Long) -> Unit,
     onAddQuickEntry: (type: DiaryEntryType, bolus: Double?, carbs: Double?, basal: Double?, note: String?, timestampMillis: Long) -> Unit,
     onSaveManualGlucose: (mgDl: Int, timestampMillis: Long) -> Unit
 ) {
@@ -115,6 +122,10 @@ fun BolusAndEntrySheet(
                     settings = settings,
                     onSave = { bolus, carbs, note, bg ->
                         onSaveBolusAndCarbs(bolus, carbs, note, bg, System.currentTimeMillis())
+                        onDismiss()
+                    },
+                    onSaveSplit = { part1, part2, delayMinutes, carbs, note, bg ->
+                        onSaveSplitBolus(part1, part2, delayMinutes, carbs, note, bg, System.currentTimeMillis())
                         onDismiss()
                     }
                 )
@@ -222,44 +233,13 @@ private fun SoftFilledTextField(
 }
 
 @Composable
-private fun CarbQuickAddRow(
-    onAddGrams: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-    ) {
-        listOf(10, 15, 30).forEach { addGrams ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable { onAddGrams(addGrams) }
-            ) {
-                Text(
-                    text = "+$addGrams g",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = TextStyle(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFeatureSettings = "tnum"
-                    ),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun BolusCalculatorTab(
     initialBgMgDl: Int,
     currentIob: Double,
     currentCob: Double,
     settings: UserSettings,
-    onSave: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit
+    onSave: (bolusUnits: Double, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit,
+    onSaveSplit: (part1Units: Double, part2Units: Double, delayMinutes: Int, carbsGrams: Double, note: String?, bgAtTime: Int?) -> Unit
 ) {
     val locale = Locale.getDefault()
     val unit = settings.glucoseUnit
@@ -269,6 +249,8 @@ private fun BolusCalculatorTab(
     var bgInput by remember { mutableStateOf(GlucoseFormatter.formatInputValue(initialBgMgDl, unit)) }
     var carbsInput by remember { mutableStateOf("") }
     var noteInput by remember { mutableStateOf("") }
+    var showNoteField by remember { mutableStateOf(false) }
+    var isSplitStep by remember { mutableStateOf(false) }
 
     val bgValMgDl = GlucoseFormatter.parseToMgDl(bgInput, unit) ?: initialBgMgDl
     val carbsVal = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -297,6 +279,18 @@ private fun BolusCalculatorTab(
     val activeBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
     val cobTextColor = if (isDark) Color(0xFF9AC9A6) else Color(0xFF3E6347)
+
+    if (isSplitStep) {
+        SplitBolusStep(
+            totalUnits = activeBolus,
+            settings = settings,
+            onBack = { isSplitStep = false },
+            onConfirm = { part1, part2, delayMinutes ->
+                onSaveSplit(part1, part2, delayMinutes, carbsVal, noteInput, bgValMgDl)
+            }
+        )
+        return
+    }
 
     // 1. Berechnungskarte OBEN (bleibt auch bei geöffneter Tastatur immer im Blick!)
     Card(
@@ -535,35 +529,329 @@ private fun BolusCalculatorTab(
 
     Spacer(modifier = Modifier.height(10.dp))
 
-    CarbQuickAddRow(
-        onAddGrams = { addGrams ->
-            val updated = (carbsVal + addGrams).toInt()
-            carbsInput = updated.toString()
+    if (showNoteField || noteInput.isNotBlank()) {
+        SoftFilledTextField(
+            value = noteInput,
+            onValueChange = { noteInput = it },
+            label = stringResource(R.string.label_note_optional_hint),
+            modifier = Modifier.fillMaxWidth()
+        )
+    } else {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .clickable { showNoteField = true }
+        ) {
+            Text(
+                text = stringResource(R.string.btn_add_note),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
         }
-    )
+    }
 
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(16.dp))
 
-    SoftFilledTextField(
-        value = noteInput,
-        onValueChange = { noteInput = it },
-        label = stringResource(R.string.label_note_optional_hint),
+    val canSplit = activeBolus >= settings.penStepSize * 2.0
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Button(
+            onClick = {
+                val finalBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
+                onSave(finalBolus, carbsVal, noteInput, bgValMgDl)
+            },
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp)
+        ) {
+            Text(stringResource(R.string.btn_save_and_log), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        FilledTonalButton(
+            onClick = { isSplitStep = true },
+            enabled = canSplit,
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.height(52.dp)
+        ) {
+            Text(stringResource(R.string.btn_split_bolus), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SplitBolusStep(
+    totalUnits: Double,
+    settings: UserSettings,
+    onBack: () -> Unit,
+    onConfirm: (part1Units: Double, part2Units: Double, delayMinutes: Int) -> Unit
+) {
+    val locale = Locale.getDefault()
+    val ieUnit = stringResource(R.string.unit_ie)
+    val stepSize = settings.penStepSize
+    val defaultPct1 = settings.defaultSplitPart1Percent
+
+    var allocation by remember(totalUnits, defaultPct1, stepSize) {
+        mutableStateOf(
+            SplitBolusCalculator.calculateInitialSplit(
+                totalUnits = totalUnits,
+                part1Percent = defaultPct1,
+                stepSize = stepSize
+            )
+        )
+    }
+    var delayMinutes by remember { mutableIntStateOf(SplitBolusCalculator.DEFAULT_DELAY_MINUTES) }
+    val timeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
+    val dueText = timeFmt.format(Date(System.currentTimeMillis() + delayMinutes * 60_000L))
+    val delayHoursText = if (delayMinutes % 60 == 0) {
+        "${delayMinutes / 60}"
+    } else {
+        String.format(locale, "%.1f", delayMinutes / 60.0)
+    }
+
+    // Header mit Zurück-Button
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.reports_back_cd)
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(
+                R.string.split_step_title,
+                String.format(locale, "%.1f", totalUnits),
+                ieUnit
+            ),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .clickable {
+                    allocation = SplitBolusCalculator.calculateInitialSplit(
+                        totalUnits = totalUnits,
+                        part1Percent = defaultPct1,
+                        stepSize = stepSize
+                    )
+                }
+        ) {
+            Text(
+                text = stringResource(R.string.split_reset_ratio, defaultPct1, 100 - defaultPct1),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // Aufteilungs-Karte (Jetzt vs. Später)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
+        ),
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
-    )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = {
+                        allocation = SplitBolusCalculator.shiftSplit(
+                            currentPart1 = allocation.part1Units,
+                            totalUnits = totalUnits,
+                            deltaSteps = -1,
+                            stepSize = stepSize
+                        )
+                    },
+                    enabled = allocation.part1Units > 0.0,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = CircleShape,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Remove, contentDescription = "−", modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.split_part1_label, allocation.part1Percent),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = String.format(locale, "%.1f %s", allocation.part1Units, ieUnit),
+                            style = TextStyle(
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = "tnum"
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.split_part2_label, allocation.part2Percent),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = String.format(locale, "%.1f %s", allocation.part2Units, ieUnit),
+                            style = TextStyle(
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = "tnum"
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = {
+                        allocation = SplitBolusCalculator.shiftSplit(
+                            currentPart1 = allocation.part1Units,
+                            totalUnits = totalUnits,
+                            deltaSteps = 1,
+                            stepSize = stepSize
+                        )
+                    },
+                    enabled = allocation.part2Units > 0.0,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = CircleShape,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, contentDescription = "+", modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // Zeitwahl in 0,5h-Schritten bis 5h
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        ),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.split_delay_title),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = stringResource(R.string.split_delay_value, delayHoursText, dueText),
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                SplitBolusCalculator.DELAY_OPTIONS_MINUTES.forEach { mins ->
+                    val selected = delayMinutes == mins
+                    val lbl = if (mins % 60 == 0) {
+                        "${mins / 60}h"
+                    } else {
+                        String.format(locale, "%.1fh", mins / 60.0)
+                    }
+                    Surface(
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { delayMinutes = mins }
+                    ) {
+                        Text(
+                            text = lbl,
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                fontFeatureSettings = "tnum"
+                            ),
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     Spacer(modifier = Modifier.height(18.dp))
 
     Button(
-        onClick = {
-            val finalBolus = manualOverride.replace(',', '.').toDoubleOrNull() ?: result.recommendedUnits
-            onSave(finalBolus, carbsVal, noteInput, bgValMgDl)
-        },
+        onClick = { onConfirm(allocation.part1Units, allocation.part2Units, delayMinutes) },
         shape = RoundedCornerShape(28.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
     ) {
-        Text(stringResource(R.string.btn_save_and_log), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.split_confirm_btn), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -623,6 +911,7 @@ private fun QuickEntryTab(
     var carbsInput by remember { mutableStateOf("") }
     var bolusInput by remember { mutableStateOf("") }
     var noteInput by remember { mutableStateOf("") }
+    var showNoteField by remember { mutableStateOf(false) }
 
     fun buildTimestampMillis(): Long {
         val cal = Calendar.getInstance().apply {
@@ -780,13 +1069,6 @@ private fun QuickEntryTab(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            CarbQuickAddRow(
-                onAddGrams = { addGrams ->
-                    val current = carbsInput.replace(',', '.').toDoubleOrNull() ?: 0.0
-                    carbsInput = (current + addGrams).toInt().toString()
-                }
-            )
             Spacer(modifier = Modifier.height(12.dp))
         }
         QuickEntryMode.GLUCOSE -> {
@@ -806,13 +1088,6 @@ private fun QuickEntryTab(
                 label = stringResource(R.string.label_carbs_g),
                 keyboardType = KeyboardType.Decimal,
                 modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            CarbQuickAddRow(
-                onAddGrams = { addGrams ->
-                    val current = valueInput.replace(',', '.').toDoubleOrNull() ?: 0.0
-                    valueInput = (current + addGrams).toInt().toString()
-                }
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -834,7 +1109,7 @@ private fun QuickEntryTab(
         }
     }
 
-    if (selectedMode != QuickEntryMode.GLUCOSE) {
+    if (selectedMode == QuickEntryMode.NOTE || (selectedMode != QuickEntryMode.GLUCOSE && (showNoteField || noteInput.isNotBlank()))) {
         SoftFilledTextField(
             value = noteInput,
             onValueChange = { noteInput = it },
@@ -845,6 +1120,22 @@ private fun QuickEntryTab(
             singleLine = selectedMode != QuickEntryMode.NOTE,
             modifier = Modifier.fillMaxWidth()
         )
+    } else if (selectedMode != QuickEntryMode.GLUCOSE) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .clickable { showNoteField = true }
+        ) {
+            Text(
+                text = stringResource(R.string.btn_add_note),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(18.dp))

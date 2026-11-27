@@ -20,4 +20,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "easyBOLUS"
-include(":app", ":wear")
+include(":app")

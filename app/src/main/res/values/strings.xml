@@ -263,4 +263,22 @@
     <string name="reports_tod_evening_label">Evening</string>
     <string name="reports_sparklines_title">Daily Glucose Profiles (last 7 days)</string>
     <string name="reports_hourly_minmax_title">Hourly Max / Min</string>
+
+    <!-- Split Bolus -->
+    <string name="settings_split_ratio">Default bolus split: %1$d%% / %2$d%%</string>
+    <string name="btn_split_bolus">Split</string>
+    <string name="btn_add_note">+ Note</string>
+    <string name="split_step_title">Split bolus (%1$s %2$s)</string>
+    <string name="split_part1_label">Now (%1$d%%)</string>
+    <string name="split_part2_label">Later (%1$d%%)</string>
+    <string name="split_delay_title">Remind in</string>
+    <string name="split_delay_value">%1$s h · at %2$s</string>
+    <string name="split_confirm_btn">Save part 1 &amp; remind</string>
+    <string name="split_reset_ratio">Default %1$d/%2$d</string>
+    <string name="notif_channel_split">Split Bolus Reminder</string>
+    <string name="notif_split_title">Split bolus due: %1$s</string>
+    <string name="notif_split_body">Remaining part of your %1$s dose (scheduled for %2$s)</string>
+    <string name="notif_split_body_note">Remaining part of your %1$s dose (%2$s) · %3$s</string>
+    <string name="notif_split_action_confirm">Injected now</string>
+    <string name="notif_split_action_dismiss">Dismiss</string>
 </resources>

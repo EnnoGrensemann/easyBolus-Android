@@ -302,6 +302,81 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun saveSplitBolus(
+        part1Units: Double,
+        part2Units: Double,
+        delayMinutes: Int,
+        carbsGrams: Double,
+        note: String?,
+        bgAtTime: Int?,
+        timestampMillis: Long = System.currentTimeMillis()
+    ) {
+        viewModelScope.launch {
+            val state = homeUiState.value
+            val matchedReading = state.chartReadings
+                .minByOrNull { kotlin.math.abs(it.timestampMillis - timestampMillis) }
+                ?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
+                ?: state.latestGlucose?.takeIf { kotlin.math.abs(it.timestampMillis - timestampMillis) <= 15 * 60_000L }
+            val bg = bgAtTime ?: matchedReading?.mgDl
+            val trend = if (bgAtTime != null && !state.settings.jugglucoEnabled) {
+                TrendArrow.UNKNOWN
+            } else {
+                matchedReading?.trendArrow
+            }
+
+            if (!state.settings.jugglucoEnabled && bgAtTime != null && bgAtTime > 0) {
+                dao.insertGlucoseReading(
+                    GlucoseReadingEntity(
+                        timestampMillis = timestampMillis,
+                        mgDl = bgAtTime.coerceIn(20, 600),
+                        trendArrow = TrendArrow.UNKNOWN,
+                        deltaMgDl = 0.0,
+                        source = "Manual"
+                    )
+                )
+            }
+
+            val cleanNote = note?.takeIf { it.isNotBlank() }
+            if (part1Units > 0.0) {
+                val splitNote = if (cleanNote != null) "$cleanNote [Split 1/2]" else "[Split 1/2]"
+                dao.insertDiaryEntry(
+                    DiaryEntryEntity(
+                        timestampMillis = timestampMillis,
+                        type = DiaryEntryType.BOLUS,
+                        bolusUnits = part1Units,
+                        note = splitNote,
+                        bgAtTimeMgDl = bg,
+                        trendAtTime = trend
+                    )
+                )
+                de.easybolus.notification.EasyBolusNotifier.resetCorrectionTimerOnBolus(getApplication())
+            }
+            if (carbsGrams > 0.0) {
+                dao.insertDiaryEntry(
+                    DiaryEntryEntity(
+                        timestampMillis = timestampMillis + 1,
+                        type = DiaryEntryType.CARBS,
+                        carbsGrams = carbsGrams,
+                        note = if (part1Units <= 0.0) cleanNote else null,
+                        bgAtTimeMgDl = bg,
+                        trendAtTime = trend
+                    )
+                )
+            }
+            if (part2Units > 0.0) {
+                de.easybolus.notification.SplitBolusScheduler.schedule(
+                    context = getApplication(),
+                    part2Units = part2Units,
+                    totalUnits = part1Units + part2Units,
+                    delayMinutes = delayMinutes,
+                    note = cleanNote,
+                    bgAtTimeMgDl = bg
+                )
+            }
+            de.easybolus.notification.EasyBolusNotifier.refreshAll(getApplication(), evaluateCorrection = false)
+        }
+    }
+
     fun addQuickEntry(
         type: DiaryEntryType,
         bolusUnits: Double? = null,

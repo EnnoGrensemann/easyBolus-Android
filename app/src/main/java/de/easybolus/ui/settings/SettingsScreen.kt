@@ -186,6 +186,9 @@ fun SettingsScreen(
     var correctionWaitMinutes by remember(settings) {
         mutableStateOf(settings.correctionAlertWaitMinutes.toString())
     }
+    var defaultSplitPart1Percent by remember(settings) {
+        mutableIntStateOf(settings.defaultSplitPart1Percent)
+    }
 
     val unitLabel = GlucoseFormatter.unitLabel(glucoseUnit)
     val bgKeyboardType = if (glucoseUnit == GlucoseUnit.MG_DL) KeyboardType.Number else KeyboardType.Decimal
@@ -248,7 +251,8 @@ fun SettingsScreen(
             correctionAlertEnabled = correctionAlertEnabled,
             correctionAlertMinUnits = parsedCorrMin,
             correctionAlertWaitMinutes = parsedCorrWait,
-            widgetTransparencyPercent = widgetTransparency
+            widgetTransparencyPercent = widgetTransparency,
+            defaultSplitPart1Percent = defaultSplitPart1Percent.coerceIn(10, 90)
         )
     }
 
@@ -836,6 +840,24 @@ fun SettingsScreen(
                                     label = { Text(stringResource(R.string.settings_pen_full)) }
                                 )
                             }
+
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_split_ratio,
+                                    defaultSplitPart1Percent,
+                                    100 - defaultSplitPart1Percent
+                                ),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Slider(
+                                value = defaultSplitPart1Percent.toFloat(),
+                                onValueChange = { raw ->
+                                    defaultSplitPart1Percent = ((raw / 5f).roundToInt() * 5).coerceIn(20, 80)
+                                },
+                                valueRange = 20f..80f,
+                                steps = 11
+                            )
                         }
                     }
 

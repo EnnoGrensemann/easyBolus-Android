@@ -58,7 +58,8 @@ data class UserSettings(
     val correctionAlertEnabled: Boolean = false,
     val correctionAlertMinUnits: Double = 1.5,
     val correctionAlertWaitMinutes: Int = 20,
-    val widgetTransparencyPercent: Int = 0
+    val widgetTransparencyPercent: Int = 0,
+    val defaultSplitPart1Percent: Int = 60
 ) {
     fun carbRatioForHour(hour: Int): Double {
         if (!useHourlyCarbRatio || hourlyCarbRatios.size != 24) return carbRatio
@@ -90,6 +91,7 @@ class SettingsRepository(private val context: Context) {
         val CORRECTION_ALERT_MIN_UNITS = doublePreferencesKey("correction_alert_min_units")
         val CORRECTION_ALERT_WAIT_MINUTES = intPreferencesKey("correction_alert_wait_minutes")
         val WIDGET_TRANSPARENCY_PERCENT = intPreferencesKey("widget_transparency_percent")
+        val DEFAULT_SPLIT_PART1_PERCENT = intPreferencesKey("default_split_part1_percent")
     }
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
@@ -133,7 +135,8 @@ class SettingsRepository(private val context: Context) {
             correctionAlertEnabled = prefs[Keys.CORRECTION_ALERT_ENABLED] ?: false,
             correctionAlertMinUnits = prefs[Keys.CORRECTION_ALERT_MIN_UNITS] ?: 1.5,
             correctionAlertWaitMinutes = prefs[Keys.CORRECTION_ALERT_WAIT_MINUTES] ?: 20,
-            widgetTransparencyPercent = (prefs[Keys.WIDGET_TRANSPARENCY_PERCENT] ?: 0).coerceIn(0, 100)
+            widgetTransparencyPercent = (prefs[Keys.WIDGET_TRANSPARENCY_PERCENT] ?: 0).coerceIn(0, 100),
+            defaultSplitPart1Percent = (prefs[Keys.DEFAULT_SPLIT_PART1_PERCENT] ?: 60).coerceIn(10, 90)
         )
     }
 
@@ -168,6 +171,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.CORRECTION_ALERT_MIN_UNITS] = settings.correctionAlertMinUnits.coerceIn(0.5, 20.0)
             prefs[Keys.CORRECTION_ALERT_WAIT_MINUTES] = settings.correctionAlertWaitMinutes.coerceIn(1, 180)
             prefs[Keys.WIDGET_TRANSPARENCY_PERCENT] = settings.widgetTransparencyPercent.coerceIn(0, 100)
+            prefs[Keys.DEFAULT_SPLIT_PART1_PERCENT] = settings.defaultSplitPart1Percent.coerceIn(10, 90)
         }
     }
 }

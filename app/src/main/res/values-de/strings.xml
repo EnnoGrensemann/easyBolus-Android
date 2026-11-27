@@ -263,4 +263,22 @@
     <string name="reports_tod_evening_label">Abends</string>
     <string name="reports_sparklines_title">Tägliche Glukoseprofile (letzte 7 Tage)</string>
     <string name="reports_hourly_minmax_title">Stündlich Max / Min</string>
+
+    <!-- Insulin Splitten -->
+    <string name="settings_split_ratio">Vorgeschlagener Bolus-Split: %1$d %% / %2$d %%</string>
+    <string name="btn_split_bolus">Splitten</string>
+    <string name="btn_add_note">+ Notiz</string>
+    <string name="split_step_title">Bolus splitten (%1$s %2$s)</string>
+    <string name="split_part1_label">Jetzt (%1$d %%)</string>
+    <string name="split_part2_label">Später (%1$d %%)</string>
+    <string name="split_delay_title">Erinnerung in</string>
+    <string name="split_delay_value">%1$s h · ca. %2$s Uhr</string>
+    <string name="split_confirm_btn">Teil 1 speichern &amp; erinnern</string>
+    <string name="split_reset_ratio">Vorschlag %1$d/%2$d</string>
+    <string name="notif_channel_split">Split-Bolus Erinnerung</string>
+    <string name="notif_split_title">Split-Bolus fällig: %1$s</string>
+    <string name="notif_split_body">Restliche Gabe deiner %1$s-Dosis (geplant für %2$s)</string>
+    <string name="notif_split_body_note">Restliche Gabe deiner %1$s-Dosis (%2$s) · %3$s</string>
+    <string name="notif_split_action_confirm">Jetzt gespritzt</string>
+    <string name="notif_split_action_dismiss">Verwerfen</string>
 </resources>

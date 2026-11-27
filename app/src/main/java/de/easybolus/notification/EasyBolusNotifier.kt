@@ -41,6 +41,7 @@ object EasyBolusNotifier {
     private const val LEGACY_CHANNEL_PERSISTENT = "easybolus_persistent_glucose"
     private const val CHANNEL_PERSISTENT = "easybolus_persistent_glucose_v2"
     private const val CHANNEL_CORRECTION = "easybolus_correction_alert"
+    const val CHANNEL_SPLIT_REMINDER = "easybolus_split_reminder"
     private const val NOTIF_ID_PERSISTENT = 1001
     private const val NOTIF_ID_CORRECTION = 1002
     private const val PREFS_NAME = "easybolus_alert_state"
@@ -78,8 +79,16 @@ object EasyBolusNotifier {
         ).apply {
             enableVibration(true)
         }
+        val splitChannel = NotificationChannel(
+            CHANNEL_SPLIT_REMINDER,
+            context.getString(R.string.notif_channel_split),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            enableVibration(true)
+        }
         nm.createNotificationChannel(persistentChannel)
         nm.createNotificationChannel(correctionChannel)
+        nm.createNotificationChannel(splitChannel)
     }
 
     fun resetCorrectionTimerOnBolus(context: Context) {
@@ -124,16 +133,6 @@ object EasyBolusNotifier {
                 cur.mgDl - prev.mgDl
             } else null
         }
-
-        // Live-Daten sofort an verbundene Wear-OS-Smartwatch pushen (z. B. Galaxy Watch 6)
-        de.easybolus.wear.WearDataSync.syncNow(
-            context = context,
-            latest = latest,
-            deltaMgDl = deltaMgDl,
-            iob = iob,
-            cob = cob,
-            settings = settings
-        )
 
         val nm = NotificationManagerCompat.from(context)
         val hasPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
