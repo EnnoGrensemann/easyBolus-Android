@@ -280,5 +280,6 @@
     <string name="notif_split_body">Restliche Gabe deiner %1$s-Dosis (geplant für %2$s)</string>
     <string name="notif_split_body_note">Restliche Gabe deiner %1$s-Dosis (%2$s) · %3$s</string>
     <string name="notif_split_action_confirm">Jetzt gespritzt</string>
+    <string name="notif_split_action_snooze">+30 Min</string>
     <string name="notif_split_action_dismiss">Verwerfen</string>
 </resources>

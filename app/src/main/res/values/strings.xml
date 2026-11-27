@@ -280,5 +280,6 @@
     <string name="notif_split_body">Remaining part of your %1$s dose (scheduled for %2$s)</string>
     <string name="notif_split_body_note">Remaining part of your %1$s dose (%2$s) · %3$s</string>
     <string name="notif_split_action_confirm">Injected now</string>
+    <string name="notif_split_action_snooze">+30 min</string>
     <string name="notif_split_action_dismiss">Dismiss</string>
 </resources>

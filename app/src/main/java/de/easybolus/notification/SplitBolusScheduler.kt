@@ -105,8 +105,10 @@ object SplitBolusScheduler {
 
     const val ACTION_SHOW_SPLIT_REMINDER = "de.easybolus.ACTION_SHOW_SPLIT_REMINDER"
     const val ACTION_CONFIRM_SPLIT = "de.easybolus.ACTION_CONFIRM_SPLIT"
+    const val ACTION_SNOOZE_SPLIT = "de.easybolus.ACTION_SNOOZE_SPLIT"
     const val ACTION_DISMISS_SPLIT = "de.easybolus.ACTION_DISMISS_SPLIT"
     const val EXTRA_SPLIT_ID = "extra_split_id"
+    private const val SNOOZE_MINUTES = 30
 
     fun schedule(
         context: Context,
@@ -128,26 +130,38 @@ object SplitBolusScheduler {
             bgAtTimeMgDl = bgAtTimeMgDl
         )
         PendingSplitStore.save(appContext, split)
+        scheduleAlarm(appContext, split)
+        return split
+    }
 
+    fun snooze30Min(context: Context, splitId: Int) {
+        val appContext = context.applicationContext
+        val existing = PendingSplitStore.getById(appContext, splitId) ?: return
+        val updated = existing.copy(dueAtMillis = System.currentTimeMillis() + SNOOZE_MINUTES * 60_000L)
+        PendingSplitStore.save(appContext, updated)
+        NotificationManagerCompat.from(appContext).cancel(splitId)
+        scheduleAlarm(appContext, updated)
+    }
+
+    private fun scheduleAlarm(appContext: Context, split: PendingSplitBolus) {
         val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(appContext, SplitBolusReceiver::class.java).apply {
             action = ACTION_SHOW_SPLIT_REMINDER
-            putExtra(EXTRA_SPLIT_ID, id)
+            putExtra(EXTRA_SPLIT_ID, split.id)
         }
         val pi = PendingIntent.getBroadcast(
             appContext,
-            id,
+            split.id,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
         if (canExact) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAtMillis, pi)
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, split.dueAtMillis, pi)
         } else {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAtMillis, pi)
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, split.dueAtMillis, pi)
         }
-        return split
     }
 
     fun cancel(context: Context, splitId: Int) {
@@ -215,6 +229,9 @@ class SplitBolusReceiver : BroadcastReceiver() {
                     }
                 }
             }
+            SplitBolusScheduler.ACTION_SNOOZE_SPLIT -> {
+                SplitBolusScheduler.snooze30Min(context, splitId)
+            }
             SplitBolusScheduler.ACTION_DISMISS_SPLIT -> {
                 PendingSplitStore.remove(context, splitId)
                 NotificationManagerCompat.from(context).cancel(splitId)
@@ -255,6 +272,16 @@ class SplitBolusReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val snoozeIntent = PendingIntent.getBroadcast(
+            context,
+            split.id + 15000,
+            Intent(context, SplitBolusReceiver::class.java).apply {
+                this.action = SplitBolusScheduler.ACTION_SNOOZE_SPLIT
+                putExtra(SplitBolusScheduler.EXTRA_SPLIT_ID, split.id)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val dismissIntent = PendingIntent.getBroadcast(
             context,
             split.id + 20000,
@@ -281,6 +308,7 @@ class SplitBolusReceiver : BroadcastReceiver() {
             .setAutoCancel(false)
             .setContentIntent(openAppIntent)
             .addAction(0, context.getString(R.string.notif_split_action_confirm), confirmIntent)
+            .addAction(0, context.getString(R.string.notif_split_action_snooze), snoozeIntent)
             .addAction(0, context.getString(R.string.notif_split_action_dismiss), dismissIntent)
             .build()
 
