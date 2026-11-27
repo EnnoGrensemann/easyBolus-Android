@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
@@ -615,7 +617,7 @@ private fun SplitBolusStep(
         String.format(locale, "%.1f", delayMinutes / 60.0)
     }
 
-    // Header mit Zurück-Button
+    // Header mit Zurück-Button (ohne Vorschlag-Chip)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -638,32 +640,11 @@ private fun SplitBolusStep(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-            shape = RoundedCornerShape(50),
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .clickable {
-                    allocation = SplitBolusCalculator.calculateInitialSplit(
-                        totalUnits = totalUnits,
-                        part1Percent = defaultPct1,
-                        stepSize = stepSize
-                    )
-                }
-        ) {
-            Text(
-                text = stringResource(R.string.split_reset_ratio, defaultPct1, 100 - defaultPct1),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-            )
-        }
     }
 
     Spacer(modifier = Modifier.height(14.dp))
 
-    // Aufteilungs-Karte (Jetzt vs. Später)
+    // Aufteilungs-Karte (‹ schiebt von Später nach Jetzt, › schiebt von Jetzt nach Später)
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
@@ -671,93 +652,90 @@ private fun SplitBolusStep(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                onClick = {
+                    allocation = SplitBolusCalculator.shiftSplit(
+                        currentPart1 = allocation.part1Units,
+                        totalUnits = totalUnits,
+                        deltaSteps = 1,
+                        stepSize = stepSize
+                    )
+                },
+                enabled = allocation.part2Units > 0.0,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = CircleShape,
+                modifier = Modifier.size(42.dp)
             ) {
-                Surface(
-                    onClick = {
-                        allocation = SplitBolusCalculator.shiftSplit(
-                            currentPart1 = allocation.part1Units,
-                            totalUnits = totalUnits,
-                            deltaSteps = -1,
-                            stepSize = stepSize
-                        )
-                    },
-                    enabled = allocation.part1Units > 0.0,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = CircleShape,
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Remove, contentDescription = "−", modifier = Modifier.size(20.dp))
-                    }
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "‹", modifier = Modifier.size(24.dp))
                 }
+            }
 
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.split_part1_label, allocation.part1Percent),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = String.format(locale, "%.1f %s", allocation.part1Units, ieUnit),
-                            style = TextStyle(
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFeatureSettings = "tnum"
-                            ),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.split_part2_label, allocation.part2Percent),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = String.format(locale, "%.1f %s", allocation.part2Units, ieUnit),
-                            style = TextStyle(
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFeatureSettings = "tnum"
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.split_part1_label, allocation.part1Percent),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = String.format(locale, "%.1f %s", allocation.part1Units, ieUnit),
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum"
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.split_part2_label, allocation.part2Percent),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = String.format(locale, "%.1f %s", allocation.part2Units, ieUnit),
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum"
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
-                Surface(
-                    onClick = {
-                        allocation = SplitBolusCalculator.shiftSplit(
-                            currentPart1 = allocation.part1Units,
-                            totalUnits = totalUnits,
-                            deltaSteps = 1,
-                            stepSize = stepSize
-                        )
-                    },
-                    enabled = allocation.part2Units > 0.0,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = CircleShape,
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Add, contentDescription = "+", modifier = Modifier.size(20.dp))
-                    }
+            Surface(
+                onClick = {
+                    allocation = SplitBolusCalculator.shiftSplit(
+                        currentPart1 = allocation.part1Units,
+                        totalUnits = totalUnits,
+                        deltaSteps = -1,
+                        stepSize = stepSize
+                    )
+                },
+                enabled = allocation.part1Units > 0.0,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = CircleShape,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = "›", modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -765,7 +743,7 @@ private fun SplitBolusStep(
 
     Spacer(modifier = Modifier.height(14.dp))
 
-    // Zeitwahl in 0,5h-Schritten bis 5h
+    // Zeitwahl in 0,5h-Schritten (0,5h bis 5,0h) mit − / + Stepper
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
@@ -773,70 +751,62 @@ private fun SplitBolusStep(
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                onClick = {
+                    delayMinutes = (delayMinutes - SplitBolusCalculator.STEP_DELAY_MINUTES)
+                        .coerceAtLeast(SplitBolusCalculator.MIN_DELAY_MINUTES)
+                },
+                enabled = delayMinutes > SplitBolusCalculator.MIN_DELAY_MINUTES,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = CircleShape,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Remove, contentDescription = "−", modifier = Modifier.size(20.dp))
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = stringResource(R.string.split_delay_title),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.split_delay_value, delayHoursText, dueText),
                     style = TextStyle(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
                         fontFeatureSettings = "tnum"
                     ),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+            Surface(
+                onClick = {
+                    delayMinutes = (delayMinutes + SplitBolusCalculator.STEP_DELAY_MINUTES)
+                        .coerceAtMost(SplitBolusCalculator.MAX_DELAY_MINUTES)
+                },
+                enabled = delayMinutes < SplitBolusCalculator.MAX_DELAY_MINUTES,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = CircleShape,
+                modifier = Modifier.size(42.dp)
             ) {
-                SplitBolusCalculator.DELAY_OPTIONS_MINUTES.forEach { mins ->
-                    val selected = delayMinutes == mins
-                    val lbl = if (mins % 60 == 0) {
-                        "${mins / 60}h"
-                    } else {
-                        String.format(locale, "%.1fh", mins / 60.0)
-                    }
-                    Surface(
-                        color = if (selected) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable { delayMinutes = mins }
-                    ) {
-                        Text(
-                            text = lbl,
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                            style = TextStyle(
-                                fontSize = 12.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                fontFeatureSettings = "tnum"
-                            ),
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
-                        )
-                    }
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Add, contentDescription = "+", modifier = Modifier.size(20.dp))
                 }
             }
         }
